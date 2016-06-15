@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">AwesomeView</string>
+
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="fanlike_fragment_title">Fanlike view</string>
+    <string name="turnable_layout_fragment_title">Turnable layout</string>
+    <string name="turnable_fragment_title">Turnable view</string>
+
+    <string name="action_settings">Settings</string>
+</resources>

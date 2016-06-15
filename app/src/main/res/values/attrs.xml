@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="AwesomeView">
+        <attr name="outerRadius" format="float"/>
+        <attr name="innerRadius" format="float"/>
+        <attr name="arrowSrc" format="reference"/>
+        <attr name="arrowPosition" format="integer"/>
+    </declare-styleable>
+
+</resources>
