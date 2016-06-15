@@ -50,7 +50,7 @@ public class TurntableLayout extends ViewGroup {
     /**
      * 该容器的内边距,无视padding属性，如需边距请用该变量
      */
-    private float mPadding;
+    private float mPadding = 0;
     /**
      * 布局时的开始角度
      * <p>
@@ -191,9 +191,9 @@ public class TurntableLayout extends ViewGroup {
             //计算中心店到icon中心距离的位置
             float distance = mOuterRadius / 2f - cWidth / 2 - mPadding;
             //计算item横坐标
-            left = mOuterRadius / 2 + Math.round(distance * Math.cos(Math.toRadians(mStartAngle) - 1 / 2f * cWidth));
+            left = mOuterRadius / 2 + Math.round(distance * Math.cos(Math.toRadians(mStartAngle)) - 1 / 2f * cWidth);
             //计算item纵坐标
-            top = mOuterRadius / 2 + Math.round(distance * Math.sin(Math.toRadians(mStartAngle) - 1 / 2f  * cWidth));
+            top = mOuterRadius / 2 + Math.round(distance * Math.sin(Math.toRadians(mStartAngle)) - 1 / 2f  * cWidth);
             child.layout((int) left, (int) top, (int) left + cWidth, (int) top + cWidth);
             mStartAngle += angleDelay;
         }
