@@ -27,7 +27,11 @@ public class TurntableLayout extends ViewGroup {
     /**
      * 菜单的中心child的默认尺寸
      */
-    private float RADIO_DEFAULT_CENTERITEM_DIMENSION = 1 / 3f;
+    private float RADIO_DEFAULT_CENTERITEM_DIMENSION = 1 / 2f;
+    /**
+     * 箭头的默认尺寸
+     */
+    private float RADIO_DEFAULT_ARROW_DIMENSION = 1 / 5f;
     /**
      * 该容器的内边距,无视padding属性，如需边距请用该变量
      */
@@ -54,8 +58,9 @@ public class TurntableLayout extends ViewGroup {
     /**
      * 布局时的开始角度
      * <p>
-     * private double mStartAngle = 0;
-     * /**
+     */
+    private double mStartAngle = 0;
+    /**
      * 检测按下到抬起时旋转的角度
      */
     private float mTmpAngle;
@@ -68,19 +73,52 @@ public class TurntableLayout extends ViewGroup {
      * 判断是否正在自动滚动
      */
     private boolean isFling;
-    private double mStartAngle = 0;
+    /**
+     * 图标ID数组
+     */
     private int[] mIconArray;
+    /**
+     * 选中的图标ID数组
+     */
     private int[] mSelectedIconArray;
-    private float mOuterRadius;
-    private float mInnerRadius;
+    /**
+     * 半径
+     */
+    private float mRadius;
     private Context mContext;
     private OnItemClickListener mItemClickListener;
+    private OnDragStopListener mDragStopListener;
+    private OnClickListener mClickListener;
+    /**
+     * 布局中心的坐标点
+     */
+    private int mCenterX;
+    private int mCenterY;
+    /**
+     * 外围箭头的位置，范围是0~360,0为最左边，顺时针方向
+     */
+    private int mArrowPosition;
+    /**
+     * 外围箭头的图标资源ID
+     */
+    private int mArrowResId;
+    /**
+     * 每一个图标之间相隔的角度，数值为360/圆上图标的个数(不是所有图标的个数，因为图标还包括箭头图标和中间选中的图标)
+     */
+    private float mAngelDegree;
     /**
      * 记录上一次的x，y坐标
      */
     private float mLastX;
     private float mLastY;
-
+    /**
+     * 是否放大
+     */
+    private boolean mIsZoomOut = false;
+    /**
+     * 选中的位置
+     */
+    private int mChoosePosition = 0;
     /**
      * 自动滚动的Runnable
      */
@@ -95,11 +133,13 @@ public class TurntableLayout extends ViewGroup {
 
         mContext = context;
         TypedArray ta = mContext.obtainStyledAttributes(attrs, R.styleable.AwesomeView);
-        mOuterRadius = ta.getFloat(R.styleable.AwesomeView_outerRadius, 0);
-        mInnerRadius = ta.getFloat(R.styleable.AwesomeView_innerRadius, 0);
+        mRadius = ta.getFloat(R.styleable.AwesomeView_radius, 0);
+        mArrowPosition = ta.getInt(R.styleable.AwesomeView_arrowPosition, 0);
+        mArrowResId = ta.getResourceId(R.styleable.AwesomeView_arrowSrc, R.drawable.arrow_to_left);
 
+        mStartAngle += mArrowPosition;
         //无视padding
-//        setPadding(0, 0, 0, 0);
+        setPadding(0, 0, 0, 0);
     }
 
     @Override
@@ -136,16 +176,15 @@ public class TurntableLayout extends ViewGroup {
 
         setMeasuredDimension(resWidth, resHeight);
 
-        //如果没有设置外半径和内半径
-        if (mOuterRadius < 1) {
-            mOuterRadius = Math.max(getMeasuredWidth(), getMeasuredHeight());
-            mInnerRadius = mOuterRadius / 2;
+        //如果没有设置半径
+        if (mRadius < 1) {
+            mRadius = Math.max(getMeasuredWidth(), getMeasuredHeight()) / 2;
         }
 
         //开始测量子view
         final int count = getChildCount();
         // icon尺寸
-        int childSize = (int) (mOuterRadius * RADIO_DEFAULT_CHILD_DIMENSION);
+        int childSize = (int) (mRadius * RADIO_DEFAULT_CHILD_DIMENSION);
         // icon测量模式
         int childMode = MeasureSpec.EXACTLY;
 
@@ -165,8 +204,7 @@ public class TurntableLayout extends ViewGroup {
             child.measure(makeMeasureSpec, makeMeasureSpec);
         }
 
-        mPadding = RADIO_PADDING_LAYOUT * mOuterRadius;
-
+        mPadding = RADIO_PADDING_LAYOUT * mRadius;
     }
 
     @Override
@@ -174,38 +212,69 @@ public class TurntableLayout extends ViewGroup {
         if (mIconArray == null || mSelectedIconArray == null || mIconArray.length < 1 || mSelectedIconArray.length < 1) {
             return;
         }
+        mCenterX = (r - l) / 2;
+        mCenterY = (b - t) / 2;
+        mStartAngle %= 360;
         // Laying out the child views
         final int childCount = getChildCount();
         float left, top;
         //icon的尺寸
-        int cWidth = (int) (mOuterRadius * RADIO_DEFAULT_CHILD_DIMENSION);
+        int iconWidth = (int) (mRadius * RADIO_DEFAULT_CHILD_DIMENSION);
+        int seletecdIconWidth = (int) (mRadius * RADIO_DEFAULT_CENTERITEM_DIMENSION);
+        //设置箭头的位置
+        View arrowView = getChildAt(getChildCount() - 1);
+        int arrowWidth = (int) (mRadius * RADIO_DEFAULT_ARROW_DIMENSION);
+        int arrowDistance = (int) (mRadius + arrowWidth / 2);
+        float arrowLeft = mCenterX - Math.round(arrowDistance * Math.cos(Math.toRadians(mArrowPosition)) + arrowWidth / 2f);
+        float arrowTop = mCenterY - Math.round(arrowDistance * Math.sin(Math.toRadians(mArrowPosition)) + arrowWidth / 2f);
+        arrowView.layout((int) arrowLeft, (int) arrowTop, (int) arrowLeft + arrowWidth, (int) arrowTop + arrowWidth);
         //根据icon的个数计算角度
-        float angleDelay = 360 / (getChildCount() - 1);
+        mAngelDegree = 360 / (childCount - 2);
+        //绘制中间图片的位置及图片
+        View selectedView = getChildAt(getChildCount() - 2);
+        //将360增加一个偏移量可以使selected判定区域不再死板，比如第一个位置的判定区域不是0到angleDelay，而是-angleDelay/2到angleDelay/2
+        int selectedIndex = ((int) (360 + mAngelDegree / 2 - mStartAngle) / (int) mAngelDegree);
+        if (selectedIndex >= 6) {
+            selectedIndex = 0;
+        }
+        ((ImageView) selectedView).setImageResource(mSelectedIconArray[selectedIndex]);
+        selectedView.layout((int) (mCenterX - seletecdIconWidth / 2), (int) (mCenterY - seletecdIconWidth / 2), (int) (mCenterX + seletecdIconWidth / 2), (int) (mCenterY + seletecdIconWidth / 2));
+        //根据旋转的位置设置中间选中的图片
+//        if (mStartAngle <= mArrowPosition + angleDelay / 2 && mStartAngle >= mArrowPosition - angleDelay / 2) {
+//            ((ImageView) selectedView).setImageResource(mSelectedIconArray[(int) mStartAngle / (int) angleDelay]);
+//        }
         //遍历去设置icon的位置
-        for (int i = 0; i < childCount; i++) {
+        for (int i = 0; i < childCount - 2; i++) {
             final View child = getChildAt(i);
             if (child.getVisibility() == GONE) {
                 continue;
             }
-            mStartAngle %= 360;
-            //计算中心店到icon中心距离的位置
-            float distance = mOuterRadius / 2f - cWidth / 2 - mPadding;
+            //计算中心点到icon中心距离的位置
+            float distance = mRadius - iconWidth / 2 - mPadding;
             //计算item横坐标
-            left = mOuterRadius / 2 + Math.round(distance * Math.cos(Math.toRadians(mStartAngle)) - 1 / 2f * cWidth);
+//            left = l + mRadius - Math.round(distance * Math.cos(Math.toRadians(mStartAngle)) - 1 / 2f * iconWidth);
+            left = mCenterX - Math.round(distance * Math.cos(Math.toRadians(mStartAngle)) + iconWidth / 2f);
             //计算item纵坐标
-            top = mOuterRadius / 2 + Math.round(distance * Math.sin(Math.toRadians(mStartAngle)) - 1 / 2f  * cWidth);
-            child.layout((int) left, (int) top, (int) left + cWidth, (int) top + cWidth);
-            mStartAngle += angleDelay;
-        }
-        this.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (mItemClickListener != null) {
-                    mItemClickListener.viewClick(v);
-                }
-            }
-        });
+//            top = t + mRadius + Math.round(distance * Math.sin(Math.toRadians(mStartAngle)) - 1 / 2f  * iconWidth);
+            top = mCenterY - Math.round(distance * Math.sin(Math.toRadians(mStartAngle)) + iconWidth / 2f);
+            child.layout((int) left, (int) top, (int) left + iconWidth, (int) top + iconWidth);
 
+            mStartAngle += mAngelDegree;
+        }
+//        this.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                if (mItemClickListener != null) {
+//                    mItemClickListener.viewClick(v);
+//                }
+//            }
+//        });
+
+    }
+
+    @Override
+    public void setOnClickListener(OnClickListener l) {
+        mClickListener = l;
     }
 
     @Override
@@ -264,14 +333,23 @@ public class TurntableLayout extends ViewGroup {
                 float anglePerSecond = mTmpAngle * 1000
                         / (System.currentTimeMillis() - mDownTime);
 
-                // Log.e("TAG", anglePrMillionSecond + " , mTmpAngel = " +
-                // mTmpAngle);
-
                 // 如果达到该值认为是快速移动
                 if (Math.abs(anglePerSecond) > mFlingableValue && !isFling) {
                     // post一个任务，去自动滚动
                     post(mFlingRunnable = new AutoFlingRunnable(anglePerSecond));
+                    return true;
+                }
 
+                if ((int) mStartAngle % (int) mAngelDegree != 0) {
+                    mStartAngle = Math.round(mStartAngle / mAngelDegree) * mAngelDegree;
+                    mChoosePosition = getChildCount() - 2 - (int) mStartAngle % 360 / (int) mAngelDegree;
+                    if (mChoosePosition == 6) {
+                        mChoosePosition = 0;
+                    }
+                    requestLayout();
+                    if (mDragStopListener != null) {
+                        mDragStopListener.doDragStopped(TurntableLayout.this, mChoosePosition);
+                    }
                     return true;
                 }
 
@@ -301,8 +379,8 @@ public class TurntableLayout extends ViewGroup {
      * @return
      */
     private float getAngle(float xTouch, float yTouch) {
-        double x = xTouch - (mOuterRadius / 2d);
-        double y = yTouch - (mOuterRadius / 2d);
+        double x = xTouch - (mCenterX);
+        double y = yTouch - (mCenterY);
         return (float) (Math.asin(y / Math.hypot(x, y)) * 180 / Math.PI);
     }
 
@@ -314,8 +392,8 @@ public class TurntableLayout extends ViewGroup {
      * @return
      */
     private int getQuadrant(float x, float y) {
-        int tmpX = (int) (x - mOuterRadius / 2);
-        int tmpY = (int) (y - mOuterRadius / 2);
+        int tmpX = (int) (x - mCenterX);
+        int tmpY = (int) (y - mCenterY);
         if (tmpX >= 0) {
             return tmpY >= 0 ? 4 : 1;
         } else {
@@ -366,6 +444,10 @@ public class TurntableLayout extends ViewGroup {
         mItemClickListener = listener;
     }
 
+    public void setOnDragStopListener (OnDragStopListener listener) {
+        mDragStopListener = listener;
+    }
+
     /**
      * 添加icon
      */
@@ -382,8 +464,10 @@ public class TurntableLayout extends ViewGroup {
             imageView.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View v) {
-
-                    if (mItemClickListener != null) {
+                    if (!mIsZoomOut) {
+                        mClickListener.onClick(v);
+                        mIsZoomOut = true;
+                    } else if (mItemClickListener != null) {
                         mItemClickListener.itemClick(v, j);
                     }
                 }
@@ -391,8 +475,28 @@ public class TurntableLayout extends ViewGroup {
             // 添加view到容器中
             addView(imageView);
         }
+        //设置selectedview
+        ImageView selectedView = new ImageView(getContext());
+        selectedView.setImageResource(mSelectedIconArray[0]);
+        selectedView.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!mIsZoomOut) {
+                    mClickListener.onClick(v);
+                    mIsZoomOut = true;
+                } else if (mItemClickListener != null) {
+                    mIsZoomOut = false;
+                    mItemClickListener.viewClick(v);
+                }
+            }
+        });
+        addView(selectedView);
+        //设置arrowview
+        ImageView arrowView = new ImageView(getContext());
+        arrowView.setImageResource(mArrowResId);
+        arrowView.setRotation(mArrowPosition);
+        addView(arrowView);
     }
-
 
     /**
      * Item的点击事件接口
@@ -401,6 +505,10 @@ public class TurntableLayout extends ViewGroup {
         void itemClick(View view, int pos);
 
         void viewClick(View view);
+    }
+
+    public interface OnDragStopListener {
+        void doDragStopped (View view, int pos);
     }
 
     /**
@@ -420,6 +528,22 @@ public class TurntableLayout extends ViewGroup {
             // 如果小于20,则停止
             if ((int) Math.abs(angelPerSecond) < 20) {
                 isFling = false;
+                if ((int) mStartAngle % (int) mAngelDegree != 0) {
+                    mChoosePosition = getChildCount() - 2 - (int) mStartAngle % 360 / (int) mAngelDegree;
+                    if (mChoosePosition == 6) {
+                        mChoosePosition = 0;
+                    }
+                    if (mStartAngle - Math.round(mStartAngle / mAngelDegree) * mAngelDegree > 0) {
+                        mStartAngle--;
+                    } else if (mStartAngle - Math.round(mStartAngle / mAngelDegree) * mAngelDegree < 0) {
+                        mStartAngle++;
+                    }
+                    postDelayed(this, 16);
+                    requestLayout();
+                }
+                if (mDragStopListener != null) {
+                    mDragStopListener.doDragStopped(TurntableLayout.this, mChoosePosition);
+                }
                 return;
             }
             isFling = true;
@@ -427,7 +551,7 @@ public class TurntableLayout extends ViewGroup {
             mStartAngle += (angelPerSecond / 30);
             // 逐渐减小这个值
             angelPerSecond /= 1.0666F;
-            postDelayed(this, 30);
+            postDelayed(this, 16);
             // 重新布局
             requestLayout();
         }

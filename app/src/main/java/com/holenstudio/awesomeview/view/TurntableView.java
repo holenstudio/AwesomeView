@@ -65,7 +65,7 @@ public class TurntableView extends View {
         mOuterRadius = ta.getFloat(R.styleable.AwesomeView_outerRadius, 100);
         mInnerRadius = ta.getFloat(R.styleable.AwesomeView_innerRadius, 100);
         mArrowPosition = ta.getInt(R.styleable.AwesomeView_arrowPosition, 180);
-        mArrowSrc = ta.getResourceId(R.styleable.AwesomeView_arrowSrc, R.drawable.arrow);
+        mArrowSrc = ta.getResourceId(R.styleable.AwesomeView_arrowSrc, R.drawable.arrow_to_up);
         init();
     }
 

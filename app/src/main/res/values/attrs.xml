@@ -2,6 +2,7 @@
 <resources>
     <declare-styleable name="AwesomeView">
         <attr name="outerRadius" format="float"/>
+        <attr name="radius" format="float"/>
         <attr name="innerRadius" format="float"/>
         <attr name="arrowSrc" format="reference"/>
         <attr name="arrowPosition" format="integer"/>

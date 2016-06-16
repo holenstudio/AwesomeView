@@ -18,6 +18,6 @@
         android:layout_alignParentRight="true"
         app:outerRadius="300.0"
         app:innerRadius="200.0"
-        app:arrowSrc="@drawable/arrow"
+        app:arrowSrc="@drawable/arrow_to_up"
         app:arrowPosition="0"/>
 </RelativeLayout>
