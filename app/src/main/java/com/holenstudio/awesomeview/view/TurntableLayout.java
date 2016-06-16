@@ -340,7 +340,7 @@ public class TurntableLayout extends ViewGroup {
                     return true;
                 }
 
-                if ((int) mStartAngle % (int) mAngelDegree != 0) {
+                if ((int) (mStartAngle + mArrowPosition) % (int) mAngelDegree != 0) {
                     mStartAngle = Math.round(mStartAngle / mAngelDegree) * mAngelDegree;
                     mChoosePosition = getChildCount() - 2 - (int) mStartAngle % 360 / (int) mAngelDegree;
                     if (mChoosePosition == 6) {
@@ -528,20 +528,19 @@ public class TurntableLayout extends ViewGroup {
             // 如果小于20,则停止
             if ((int) Math.abs(angelPerSecond) < 20) {
                 isFling = false;
-                if ((int) mStartAngle % (int) mAngelDegree != 0) {
-                    mChoosePosition = getChildCount() - 2 - (int) mStartAngle % 360 / (int) mAngelDegree;
-                    if (mChoosePosition == 6) {
-                        mChoosePosition = 0;
-                    }
-                    if (mStartAngle - Math.round(mStartAngle / mAngelDegree) * mAngelDegree > 0) {
+                mChoosePosition = getChildCount() - 2 - (int) (mStartAngle + mArrowPosition) % 360 / (int) mAngelDegree;
+                if (mChoosePosition == 6) {
+                    mChoosePosition = 0;
+                }
+                if ((int) (mStartAngle + mArrowPosition) % (int) mAngelDegree != 0) {
+                    if ((mStartAngle + mArrowPosition) - mChoosePosition * mAngelDegree > 0) {
                         mStartAngle--;
-                    } else if (mStartAngle - Math.round(mStartAngle / mAngelDegree) * mAngelDegree < 0) {
+                    } else if ((mStartAngle + mArrowPosition) - mChoosePosition * mAngelDegree < 0) {
                         mStartAngle++;
                     }
                     postDelayed(this, 16);
                     requestLayout();
-                }
-                if (mDragStopListener != null) {
+                } else if (mDragStopListener != null) {
                     mDragStopListener.doDragStopped(TurntableLayout.this, mChoosePosition);
                 }
                 return;

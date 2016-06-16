@@ -3,6 +3,8 @@ package com.holenstudio.awesomeview.ui;
 import android.animation.ObjectAnimator;
 import android.animation.PropertyValuesHolder;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
@@ -84,6 +86,8 @@ public class TurnableLayoutFragment extends Fragment{
                 Toast.makeText(getContext(), "选择的是：" + pos, Toast.LENGTH_SHORT).show();
             }
         });
+
+        Handler handler = new Handler(Looper.getMainLooper());
 
         return view;
     }

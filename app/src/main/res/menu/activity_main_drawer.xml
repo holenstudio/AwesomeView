@@ -15,9 +15,13 @@
             android:icon="@drawable/ic_menu_gallery"
             android:title="FanlikeView" />
         <item
-            android:id="@+id/nav_manage"
+            android:id="@+id/aaa_fragment"
             android:icon="@drawable/ic_menu_manage"
-            android:title="Tools" />
+            android:title="aaa" />
+        <item
+            android:id="@+id/test_fragment"
+            android:icon="@drawable/ic_menu_manage"
+            android:title="Test" />
     </group>
 
     <item android:title="Communicate">

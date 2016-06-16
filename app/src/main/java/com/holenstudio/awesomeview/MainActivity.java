@@ -15,6 +15,7 @@ import android.view.MenuItem;
 import android.view.View;
 
 import com.holenstudio.awesomeview.ui.FanlikeFragment;
+import com.holenstudio.awesomeview.ui.TestFragment;
 import com.holenstudio.awesomeview.ui.TurnableFragment;
 import com.holenstudio.awesomeview.ui.TurnableLayoutFragment;
 
@@ -24,6 +25,7 @@ public class MainActivity extends AppCompatActivity
     private TurnableFragment mTurnableFragment;
     private TurnableLayoutFragment mTurnableLayoutFragment;
     private FanlikeFragment mFanlikeFragment;
+    private TestFragment mTestFragment;
     private Toolbar toolbar;
 
     @Override
@@ -107,8 +109,12 @@ public class MainActivity extends AppCompatActivity
             ft.replace(R.id.content_layout, mTurnableLayoutFragment).commit();
             toolbar.setTitle(R.string.turnable_layout_fragment_title);
 
-        } else if (id == R.id.nav_manage) {
-
+        } else if (id == R.id.test_fragment) {
+            if (mTestFragment == null) {
+                mTestFragment = TestFragment.getInstance(null);
+            }
+            ft.replace(R.id.content_layout, mTestFragment).commit();
+            toolbar.setTitle(R.string.test_fragment_title);
         } else if (id == R.id.nav_share) {
 
         } else if (id == R.id.nav_send) {
