@@ -10,6 +10,7 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.SeekBar;
 import android.widget.Toast;
 
 import com.holenstudio.awesomeview.R;
@@ -21,6 +22,7 @@ import com.holenstudio.awesomeview.view.TurntableView;
  */
 public class TurnableLayoutFragment extends Fragment{
     private TurntableLayout turntableLayout;
+    private SeekBar seekBar;
     private int[] mIconArray = {
             R.drawable.auto
             , R.drawable.flower
@@ -87,7 +89,24 @@ public class TurnableLayoutFragment extends Fragment{
             }
         });
 
-        Handler handler = new Handler(Looper.getMainLooper());
+        seekBar = (SeekBar) view.findViewById(R.id.seek_bar);
+        seekBar.setMax(360);
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                turntableLayout.setArrowPosition(progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
 
         return view;
     }
