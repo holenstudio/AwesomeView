@@ -241,9 +241,12 @@ public class TurntableLayout extends ViewGroup {
         //绘制中间图片的位置及图片
         View selectedView = getChildAt(childCount - 2);
         //将mStartAngle增加一个偏移量可以使selected判定区域不再死板，比如第一个位置的判定区域不是0到angleDelay，而是-angleDelay/2到angleDelay/2
-        mSelectedIndex = ((int) (mAngelDegree / 2 + (mStartAngle - mArrowPosition)) / (int) mAngelDegree);
-        Log.d(TAG, "mSelectedIndex=" + mSelectedIndex + " mStartAngle=" + mStartAngle);
-        //因为索引跟旋转的方向恰好是相反的，所以得用最大值减去索引得出最终的索引；
+        int tmp = (int) mStartAngle - mArrowPosition;
+        if (tmp < 0) {
+            tmp += 360;
+        }
+        mSelectedIndex = ((int) (mAngelDegree / 2 + tmp) / (int) mAngelDegree);
+        //因为索引跟旋转的方向恰好是相反的，所以得用索引的长度减去索引得出最终的索引；
         mSelectedIndex = arrayLength - mSelectedIndex;
         mSelectedIndex %= arrayLength;
         ((ImageView) selectedView).setImageResource(mSelectedIconArray[mSelectedIndex]);
@@ -335,7 +338,7 @@ public class TurntableLayout extends ViewGroup {
                     return true;
                 }
 
-                if ((int) (mStartAngle + mArrowPosition) % (int) mAngelDegree != 0) {
+                if ((int) (mStartAngle - mArrowPosition) % (int) mAngelDegree != 0) {
                     mStartAngle = Math.round((mStartAngle - mArrowPosition) / mAngelDegree) * mAngelDegree + mArrowPosition;
                     requestLayout();
                     if (mDragStopListener != null) {
@@ -526,9 +529,9 @@ public class TurntableLayout extends ViewGroup {
             if ((int) Math.abs(angelPerSecond) < 20) {
                 isFling = false;
                 if ((int) (mStartAngle - mArrowPosition) % (int) mAngelDegree != 0) {
-                    if ((mStartAngle - mArrowPosition) - mSelectedIndex * mAngelDegree > 0) {
+                    if ((mStartAngle - mArrowPosition) - Math.round((mStartAngle - mArrowPosition) / mAngelDegree) * mAngelDegree > 0) {
                         mStartAngle--;
-                    } else if ((mStartAngle - mArrowPosition) - mSelectedIndex * mAngelDegree < 0) {
+                    } else if ((mStartAngle - mArrowPosition) - Math.round((mStartAngle - mArrowPosition) / mAngelDegree) * mAngelDegree < 0) {
                         mStartAngle++;
                     }
                     postDelayed(this, 16);
