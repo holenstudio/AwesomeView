@@ -6,6 +6,7 @@
         <attr name="innerRadius" format="float"/>
         <attr name="arrowSrc" format="reference"/>
         <attr name="arrowPosition" format="integer"/>
+        <attr name="selectedIconZoomRate" format="float"/>
     </declare-styleable>
 
 </resources>

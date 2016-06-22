@@ -48,6 +48,11 @@ public class TurntableView extends View {
     private OnClickListener mClickListener;
     private long mLastTime;
     private long mCurrentTime;
+    private int mCurrentRotatedDegree;
+    /**
+     * 在圆上(不是园中)选中的图标缩放的比值
+     */
+    private float mSelectedIconZoomRate;
 
     public TurntableView(Context context) {
         this(context, null);
@@ -66,6 +71,7 @@ public class TurntableView extends View {
         mInnerRadius = ta.getFloat(R.styleable.AwesomeView_innerRadius, 100);
         mArrowPosition = ta.getInt(R.styleable.AwesomeView_arrowPosition, 180);
         mArrowSrc = ta.getResourceId(R.styleable.AwesomeView_arrowSrc, R.drawable.arrow_to_up);
+        mSelectedIconZoomRate = ta.getFloat(R.styleable.AwesomeView_selectedIconZoomRate, 1.2f);
         init();
     }
 
@@ -100,8 +106,8 @@ public class TurntableView extends View {
     protected void onDraw(Canvas canvas) {
         mCenterX = getWidth() / 2;
         mCenterY = getHeight() / 2;
-        canvas.drawCircle(mCenterX, mCenterY, mOuterRadius, mPaint);
-        canvas.drawCircle(mCenterX, mCenterY, mInnerRadius, mPaint);
+//        canvas.drawCircle(mCenterX, mCenterY, mOuterRadius, mPaint);
+//        canvas.drawCircle(mCenterX, mCenterY, mInnerRadius, mPaint);
         drawArrow(canvas);
         updateCanvas(canvas);
 
@@ -175,8 +181,12 @@ public class TurntableView extends View {
             double offsetDegree = Math.acos(iconLength / iconRadius);
             for (int i = 0; i < length; i++) {
                 Bitmap icon = BitmapFactory.decodeResource(getResources(), mIconArray[i]);
+                icon = ImageUtil.rotatingImageView((int) (360 - rotateDegree + 360.0f / length * i), icon);
                 iconLeft = mCenterX + iconRadius * Math.sin(0 - offsetDegree);
                 iconTop = mCenterY - iconRadius * Math.cos(0 - offsetDegree);
+
+                    icon = Bitmap.createScaledBitmap(icon, (int) (icon.getWidth() * (mSelectedIconZoomRate)), (int) (icon.getHeight() * (mSelectedIconZoomRate)), true);
+
                 canvas.drawBitmap(icon, (float) iconLeft, (float) iconTop, mPaint);
                 canvas.rotate(360.0f / length * (length - 1), mCenterX, mCenterY);
             }
@@ -223,8 +233,8 @@ public class TurntableView extends View {
                 rotateDegree += Math.toDegrees(Math.asin(arcSinDegree));
                 rotateDegree %= 360;
                 Log.d(TAG, "rotateDegree = " + rotateDegree);
-                Log.d(TAG, "asdafa mLastX = " + mLastX + "mLastY = " + mLastY);
-                Log.d(TAG, "asdafa currentX = " + currentX + "currentY = " + currentY);
+                Log.d(TAG, "mLastX = " + mLastX + "mLastY = " + mLastY);
+                Log.d(TAG, "currentX = " + currentX + "currentY = " + currentY);
                 //将选择的icon放大
                 mLastX = event.getX();
                 mLastY = event.getY();
