@@ -1,21 +1,27 @@
 package com.holenstudio.awesomeview.ui;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.OrientationEventListener;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
 import com.holenstudio.awesomeview.R;
+import com.holenstudio.awesomeview.util.ImageUtil;
 import com.holenstudio.awesomeview.view.TurntableView;
 
 /**
  * Created by Holen on 2016/6/14.
  */
 public class TurnableFragment extends Fragment implements View.OnClickListener {
+    private final String TAG = "TurnableFragment";
     private TurntableView turntableView;
+    private int mOrientation;
     private int[] mIconArray = {
             R.drawable.auto
             , R.drawable.flower
@@ -32,6 +38,7 @@ public class TurnableFragment extends Fragment implements View.OnClickListener {
             , R.drawable.scene_selected
             , R.drawable.time_selected
     };
+    private TurnableOrientationEventListener mOrientationEventListener;
 
     public static TurnableFragment getInstance(Bundle args) {
         TurnableFragment fragment = new TurnableFragment();
@@ -55,8 +62,21 @@ public class TurnableFragment extends Fragment implements View.OnClickListener {
             }
         });
         turntableView.setOnClickListener(this);
+        mOrientationEventListener = new TurnableOrientationEventListener(getContext());
 
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        mOrientationEventListener.enable();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        mOrientationEventListener.disable();
     }
 
     @Override
@@ -68,6 +88,24 @@ public class TurnableFragment extends Fragment implements View.OnClickListener {
                 break;
             default:
                 break;
+        }
+    }
+
+    public class TurnableOrientationEventListener extends OrientationEventListener {
+
+        public TurnableOrientationEventListener(Context context) {
+            super(context);
+            // TODO Auto-generated constructor stub
+        }
+
+        @Override
+        public void onOrientationChanged(int orientation) {
+            if(orientation == OrientationEventListener.ORIENTATION_UNKNOWN){
+                return;
+            }
+            Log.d(TAG, "orientation = " + orientation);
+            mOrientation = ImageUtil.roundOrientation(orientation, mOrientation);
+            turntableView.setOrientation(mOrientation, true);
         }
     }
 }
