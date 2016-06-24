@@ -1,12 +1,18 @@
 package com.holenstudio.awesomeview.view;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.DashPathEffect;
 import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PathEffect;
+import android.graphics.RectF;
+import android.os.Build;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -95,6 +101,10 @@ public class TurntableView extends View implements Rotatable {
      */
     private int currentIcon;
     /**
+     * 当前选中的图标资源索引
+     */
+    private int currentIconIndex;
+    /**
      * 拖拽的监听器
      */
     private OnDragListener mDragListener;
@@ -109,7 +119,11 @@ public class TurntableView extends View implements Rotatable {
     /**
      * 是否启用箭头图标
      */
-    private boolean mIsShowArrow = true;
+    private boolean mIsShowArrow = false;
+    /**
+     * 是否启用放大已选中图标
+     */
+    private boolean mIsZoomOutSelectedIcon = false;
     /**
      * 图标旋转的角度，也就是拖拽的时候每一次旋转的角度
      */
@@ -150,6 +164,10 @@ public class TurntableView extends View implements Rotatable {
      * 在圆上(不是园中)选中的图标缩放的比值
      */
     private float mSelectedIconZoomRate;
+    /**
+     * 上一次选中的图标索引id
+     */
+    private int mLastSelectedIconId;
 
     public TurntableView(Context context) {
         this(context, null);
@@ -165,7 +183,7 @@ public class TurntableView extends View implements Rotatable {
         mContext = context;
         TypedArray ta = mContext.obtainStyledAttributes(attrs, R.styleable.AwesomeView);
         mOuterRadius = ta.getFloat(R.styleable.AwesomeView_outerRadius, 100);
-        mInnerRadius = ta.getFloat(R.styleable.AwesomeView_innerRadius, 100);
+        mInnerRadius = ta.getFloat(R.styleable.AwesomeView_innerRadius, 50);
         mArrowPosition = ta.getInt(R.styleable.AwesomeView_arrowPosition, 0);
         mArrowSrc = ta.getResourceId(R.styleable.AwesomeView_arrowSrc, R.drawable.arrow_to_down);
         mSelectedIconZoomRate = ta.getFloat(R.styleable.AwesomeView_selectedIconZoomRate, 2.0f);
@@ -175,6 +193,7 @@ public class TurntableView extends View implements Rotatable {
     private void init() {
         mRadius = (mOuterRadius + mInnerRadius) / 2;
         currentIcon = R.drawable.auto_selected;
+        currentIconIndex = 0;
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaint.setColor(Color.BLUE);
         mPaint.setStyle(Paint.Style.STROKE); // 设置空心
@@ -204,8 +223,10 @@ public class TurntableView extends View implements Rotatable {
     protected void onDraw(Canvas canvas) {
         mCenterX = getWidth() / 2;
         mCenterY = getHeight() / 2;
-//        canvas.drawCircle(mCenterX, mCenterY, mOuterRadius, mPaint);
-//        canvas.drawCircle(mCenterX, mCenterY, mInnerRadius, mPaint);
+        PathEffect effects = new DashPathEffect(new float[]{5,5,5,5},1);
+        mPaint.setPathEffect(effects);
+        canvas.drawCircle(mCenterX, mCenterY, mOuterRadius, mPaint);
+        canvas.drawCircle(mCenterX, mCenterY, mInnerRadius, mPaint);
         if (mScreenCurrentDegree != mScreenTargetDegree) {
             long time = AnimationUtils.currentAnimationTimeMillis();
             if (time < mAnimationEndTime) {
@@ -221,9 +242,7 @@ public class TurntableView extends View implements Rotatable {
         }
 
         canvas.rotate(0 - mScreenCurrentDegree, mCenterX, mCenterY);
-        if (mIsShowArrow) {
-            drawArrow(canvas);
-        }
+        drawArrow(canvas);
         updateCanvas(canvas);
 
         super.onDraw(canvas);
@@ -234,12 +253,28 @@ public class TurntableView extends View implements Rotatable {
      *
      * @param canvas
      */
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void drawArrow(Canvas canvas) {
-        Bitmap arrow = BitmapFactory.decodeResource(getResources(), mArrowSrc);
-        float arrowLeft = mCenterX - arrow.getWidth() / 2;
-        float arrowTop = mCenterY - mOuterRadius - arrow.getHeight() * 3 / 4;
+
+        if (mIsShowArrow) {
+            Bitmap arrow = BitmapFactory.decodeResource(getResources(), mArrowSrc);
+            float arrowLeft = mCenterX - arrow.getWidth() / 2;
+            float arrowTop = mCenterY - mOuterRadius - arrow.getHeight() * 3 / 4;
+            canvas.drawBitmap(arrow, arrowLeft, arrowTop, mPaint);
+        }
         canvas.rotate(mArrowPosition, mCenterX, mCenterY);
-        canvas.drawBitmap(arrow, arrowLeft, arrowTop, mPaint);
+        mPaint.setStyle(Paint.Style.FILL);//充满
+        mPaint.setColor(Color.RED);
+        float tmpRadius = (float) (mOuterRadius * Math.sin(Math.toRadians(360.0f / mIconArray.length / 4)));
+        Path path = new Path();
+        path.moveTo(mCenterX - tmpRadius, (float) (mCenterY - mOuterRadius * Math.cos(Math.toRadians(360.0 / mIconArray.length / 4))));
+        //startAngle的0度是在3点方向，所以还原到顶点的话需要减去90度
+        path.arcTo(mCenterX - mOuterRadius, mCenterY - mOuterRadius, mCenterX + mOuterRadius, mCenterY + mOuterRadius, 0 - 90 -  360.0f / mIconArray.length / 4, 360.0f / mIconArray.length / 4 * 2, false);
+        path.lineTo(mCenterX + tmpRadius, (float) (mCenterY - mOuterRadius * Math.cos(Math.toRadians(360.0 / mIconArray.length / 4))) + 2 * tmpRadius);
+        path.arcTo(mCenterX - tmpRadius, (float) (mCenterY - mOuterRadius * Math.cos(Math.toRadians(360.0 / mIconArray.length / 4))) + tmpRadius, mCenterX + tmpRadius, (float) (mCenterY - mOuterRadius * Math.cos(Math.toRadians(360.0 / mIconArray.length / 4)) + 3 * tmpRadius), 0, 180, false);
+        path.close();
+        canvas.drawPath(path, mPaint);
+        mPaint.setStyle(Paint.Style.STROKE);
     }
 
     private void updateCanvas(Canvas canvas) {
@@ -248,24 +283,33 @@ public class TurntableView extends View implements Rotatable {
         if (!mIsTouchUp) {
             return;
         }
-        if (Math.abs(acceleration) > 1) {
-//            if (acceleration > 0) {
-//                acceleration -= 1;
-//            }
-//            else {
-//                acceleration += 1;
-//            }
+        if (Math.abs(acceleration) > 100) {
             acceleration *= 0.9;
             invalidate();
-        } else {
-            for (int i = 0; i < mSelectedIconArray.length; i++) {
-                if (currentIcon == mSelectedIconArray[i]) {
-                    rotateDegree = 360 / mSelectedIconArray.length * i;
-                }
+        } else if (Math.abs(acceleration) > 1) {
+//            for (int i = 0; i < mSelectedIconArray.length; i++) {
+//                if (currentIcon == mSelectedIconArray[i]) {
+//                    rotateDegree = 360 / mSelectedIconArray.length * i;
+//                }
+//            }
+//            if (mIsRequiresUpdate) {
+//                invalidate();
+//                mIsRequiresUpdate = false;
+//            }
+            if (acceleration > 0) {
+                acceleration--;
             }
-            if (mIsRequiresUpdate) {
-                invalidate();
-                mIsRequiresUpdate = false;
+            if (acceleration < 0) {
+                acceleration++;
+            }
+            invalidate();
+        } else {
+            if (mLastSelectedIconId != currentIcon) {
+                return;
+            }
+            mLastSelectedIconId = currentIcon;
+            if (mClickListener != null) {
+                mClickListener.onClick(this);
             }
         }
 
@@ -282,12 +326,11 @@ public class TurntableView extends View implements Rotatable {
             return;
         }
 
-        if (Math.abs(acceleration) > 1) {
+        int length = mIconArray.length;
+        if (Math.abs(acceleration) > 100) {
             rotateDegree += acceleration;
         }
-        Log.d(TAG, "rotateDegree" + rotateDegree);
         canvas.rotate((float) rotateDegree, mCenterX, mCenterY);
-        int length = mIconArray.length;
         double iconLeft;
         double iconTop;
         Bitmap bmp = BitmapFactory.decodeResource(getResources(), mIconArray[0]);
@@ -297,17 +340,18 @@ public class TurntableView extends View implements Rotatable {
             icon = ImageUtil.rotatingImageView((int) (360 - rotateDegree + singleDegree * (length - i) - mArrowPosition), icon);
             iconLeft = mCenterX - icon.getWidth() / 2;
             iconTop = mCenterY - mRadius - bmp.getHeight() / 2;
-            //计算每个图标当前的位置
-            int position = Math.abs((int) (360 + rotateDegree + singleDegree * i + mArrowPosition) % 360);
-            Log.d(TAG, "dsfafsfsffdsdfafwtwtgdg position=" + position + ",rotateDegree=" + rotateDegree);
-            //计算该图标的位置距离起点相差多少
-            position = Math.min(Math.abs(position - mArrowPosition), Math.abs(360 + mArrowPosition - position));
-            //放大靠近起点的图标
-            if (position < singleDegree) {
-                double zoomRate = (1 - position / (singleDegree * 1.0f)) * (mSelectedIconZoomRate - 1);
-                icon = Bitmap.createScaledBitmap(icon, (int) (icon.getWidth() * (1 + zoomRate)), (int) (icon.getHeight() * (1 + zoomRate)), false);
-                iconLeft = mCenterX - (mCenterX - iconLeft) * (1 + zoomRate);
-                iconTop = mCenterY - mRadius - (mCenterY - mRadius - iconTop) * (1 + zoomRate);
+            if (mIsZoomOutSelectedIcon) {
+                //计算每个图标当前的位置
+                int position = Math.abs((int) (360 + rotateDegree + singleDegree * i + mArrowPosition) % 360);
+                //计算该图标的位置距离起点相差多少
+                position = Math.min(Math.abs(position - mArrowPosition), Math.abs(360 + mArrowPosition - position));
+                //放大靠近起点的图标
+                if (position < singleDegree) {
+                    double zoomRate = (1 - position / (singleDegree * 1.0f)) * (mSelectedIconZoomRate - 1);
+                    icon = Bitmap.createScaledBitmap(icon, (int) (icon.getWidth() * (1 + zoomRate)), (int) (icon.getHeight() * (1 + zoomRate)), false);
+                    iconLeft = mCenterX - (mCenterX - iconLeft) * (1 + zoomRate);
+                    iconTop = mCenterY - mRadius - (mCenterY - mRadius - iconTop) * (1 + zoomRate);
+                }
             }
             canvas.drawBitmap(icon, (float) iconLeft, (float) iconTop, mPaint);
             canvas.rotate(360.0f / length, mCenterX, mCenterY);
@@ -334,6 +378,7 @@ public class TurntableView extends View implements Rotatable {
             position = (int) (360 + rotateDegree + 360.0f / length * i + mArrowPosition) % 360;
             if (Math.abs(position - mArrowPosition) < (360.0f / length / 2) || Math.abs(position - mArrowPosition) > (360 - 360.0f / length / 2)) {
                 currentIcon = mSelectedIconArray[i];
+                currentIconIndex = i;
             }
         }
     }
@@ -365,9 +410,6 @@ public class TurntableView extends View implements Rotatable {
                                 (currentX - mCenterX) + (currentY - mCenterY) * (currentY - mCenterY)));
                 rotateDegree += Math.toDegrees(Math.asin(arcSinDegree));
                 rotateDegree %= 360;
-                Log.d(TAG, "rotateDegree = " + rotateDegree);
-                Log.d(TAG, "mLastX = " + mLastX + "mLastY = " + mLastY);
-                Log.d(TAG, "currentX = " + currentX + "currentY = " + currentY);
                 //将选择的icon放大
                 mLastX = event.getX();
                 mLastY = event.getY();
@@ -378,18 +420,39 @@ public class TurntableView extends View implements Rotatable {
                 mCurrentTime = System.currentTimeMillis();
                 mVelocityTracker.computeCurrentVelocity(1);
                 mIsTouchUp = true;
-                if (mCurrentTime - mLastTime < 100 && mVelocityTracker.getXVelocity() < 0.1 && mVelocityTracker.getYVelocity() < 0.1) {
-                    if (mClickListener != null) {
-                        mClickListener.onClick(this);
-                    }
+//                if (mCurrentTime - mLastTime < 100 && mVelocityTracker.getXVelocity() < 0.1 && mVelocityTracker.getYVelocity() < 0.1) {
+//                    if (mClickListener != null) {
+//                        mClickListener.onClick(this);
+//                    }
+//                }
+                if (mVelocityTracker.getXVelocity() < 10 || mVelocityTracker.getYVelocity() < 10) {
+                    rotateDegree = (mIconArray.length - currentIconIndex) * (360 / mIconArray.length);
                 }
+                mScreenClockwise = calculateClockwise(mCenterX, mCenterY, event.getX(), event.getY(), mVelocityTracker.getXVelocity(), mVelocityTracker.getYVelocity());
+
                 updateFlingView();
-                Log.d(TAG, "VelocityTracker:X=" + mVelocityTracker.getXVelocity() + ",Y=" + mVelocityTracker.getYVelocity());
                 return true;
 
         }
 
         return super.onTouchEvent(event);
+    }
+
+    /**
+     * 根据http://hellerfu.com/android-3d-cube.html，5.4.4（7），参考三角形面积公式可以得到中心点与手指离开时的向量的位置(中心点位于向量的左边还是右边)
+     * 结合位置再根据向量的方向可以得到是顺时针还是逆时针
+     * @param centerX
+     * @param centerY
+     * @param x
+     * @param y
+     * @param xVelocity
+     * @param yVelocity
+     * @return
+     */
+    private boolean calculateClockwise(float centerX, float centerY, float x, float y, float xVelocity, float yVelocity) {
+        float area = (y * (x + xVelocity)) - (x * (y + yVelocity)) - xVelocity * centerY + yVelocity * centerX;
+        //小于0是说明中心点在向量的右边，那么也就是说向量的方向是顺时针方向
+        return area < 0;
     }
 
     private void updateFlingView() {

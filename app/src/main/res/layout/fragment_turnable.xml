@@ -17,7 +17,7 @@
         android:layout_alignParentBottom="true"
         android:layout_alignParentRight="true"
         app:outerRadius="300.0"
-        app:innerRadius="200.0"
+        app:innerRadius="170.0"
         app:arrowSrc="@drawable/arrow_to_down"
-        app:arrowPosition="90"/>
+        app:arrowPosition="270"/>
 </RelativeLayout>

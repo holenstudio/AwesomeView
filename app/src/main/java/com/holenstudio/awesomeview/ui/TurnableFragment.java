@@ -29,6 +29,12 @@ public class TurnableFragment extends Fragment implements View.OnClickListener {
             , R.drawable.run
             , R.drawable.scene
             , R.drawable.time
+            , R.drawable.clock
+            , R.drawable.flag
+            , R.drawable.flight
+            , R.drawable.heart
+            , R.drawable.shield
+            , R.drawable.vip
     };
     private int[] mSelectedArray = {
             R.drawable.auto_selected
@@ -37,6 +43,12 @@ public class TurnableFragment extends Fragment implements View.OnClickListener {
             , R.drawable.run_selected
             , R.drawable.scene_selected
             , R.drawable.time_selected
+            , R.drawable.clock_selected
+            , R.drawable.flag_selected
+            , R.drawable.flight_selected
+            , R.drawable.heart_selected
+            , R.drawable.shield_selected
+            , R.drawable.vip_selected
     };
     private TurnableOrientationEventListener mOrientationEventListener;
 

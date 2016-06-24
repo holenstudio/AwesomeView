@@ -337,15 +337,16 @@ public class TurntableLayout extends ViewGroup {
                     post(mFlingRunnable = new AutoFlingRunnable(anglePerSecond));
                     return true;
                 }
-
                 if ((int) (mStartAngle - mArrowPosition) % (int) mAngelDegree != 0) {
-                    mStartAngle = Math.round((mStartAngle - mArrowPosition) / mAngelDegree) * mAngelDegree + mArrowPosition;
-                    requestLayout();
-                    if (mDragStopListener != null) {
-                        mDragStopListener.doDragStopped(TurntableLayout.this, mSelectedIndex);
-                    }
-                    return true;
+                mStartAngle = Math.round((mStartAngle - mArrowPosition) / mAngelDegree) * mAngelDegree + mArrowPosition;
+                requestLayout();
+                if (mDragStopListener != null) {
+                    mDragStopListener.doDragStopped(TurntableLayout.this, mSelectedIndex);
                 }
+                return true;
+            }
+
+
 
                 // 如果当前旋转角度超过NOCLICK_VALUE屏蔽点击
                 if (Math.abs(mTmpAngle) > NOCLICK_VALUE) {
