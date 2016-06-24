@@ -121,6 +121,10 @@ public class TurntableView extends View implements Rotatable {
      */
     private boolean mIsShowArrow = false;
     /**
+     *
+     */
+    private boolean mIsClockwiseFling;
+    /**
      * 是否启用放大已选中图标
      */
     private boolean mIsZoomOutSelectedIcon = false;
@@ -427,10 +431,12 @@ public class TurntableView extends View implements Rotatable {
 //                }
                 if (mVelocityTracker.getXVelocity() < 10 || mVelocityTracker.getYVelocity() < 10) {
                     rotateDegree = (mIconArray.length - currentIconIndex) * (360 / mIconArray.length);
+                    invalidate();
+                } else {
+                    mIsClockwiseFling = calculateClockwise(mCenterX, mCenterY, event.getX(), event.getY(), mVelocityTracker.getXVelocity(), mVelocityTracker.getYVelocity());
+                    updateFlingView();
                 }
-                mScreenClockwise = calculateClockwise(mCenterX, mCenterY, event.getX(), event.getY(), mVelocityTracker.getXVelocity(), mVelocityTracker.getYVelocity());
 
-                updateFlingView();
                 return true;
 
         }
@@ -456,7 +462,8 @@ public class TurntableView extends View implements Rotatable {
     }
 
     private void updateFlingView() {
-        acceleration = mVelocityTracker.getXVelocity() * mVelocityTracker.getYVelocity();
+        acceleration = Math.abs(mVelocityTracker.getXVelocity() * mVelocityTracker.getYVelocity());
+        acceleration = mIsClockwiseFling? acceleration : 0 - acceleration;
         invalidate();
     }
 
