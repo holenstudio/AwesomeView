@@ -151,9 +151,13 @@ public class TurntableView extends View implements Rotatable {
      */
     private boolean mIsTouchUp = false;
     /**
-     * 加速度
+     * 旋转偏移量
      */
     private float acceleration = 0.0f;
+    /**
+     * 判断是否正在自动滚动
+     */
+    private boolean isFling;
     private OnClickListener mClickListener;
     /**
      * 记录手指在view中上次操作时的时间
@@ -172,6 +176,18 @@ public class TurntableView extends View implements Rotatable {
      * 上一次选中的图标索引id
      */
     private int mLastSelectedIconId;
+    /**
+     * 自动滚动的Runnable
+     */
+    private AutoFlingRunnable mFlingRunnable;
+    /**
+     * 自动滚动时的速度
+     */
+    private float mFlingVelocity;
+    /**
+     * 自动滚动时的加速度
+     */
+    private float mFlingAcceleration;
 
     public TurntableView(Context context) {
         this(context, null);
@@ -287,35 +303,35 @@ public class TurntableView extends View implements Rotatable {
         if (!mIsTouchUp) {
             return;
         }
-        if (Math.abs(acceleration) > 100) {
-            acceleration *= 0.9;
-            invalidate();
-        } else if (Math.abs(acceleration) > 1) {
-//            for (int i = 0; i < mSelectedIconArray.length; i++) {
-//                if (currentIcon == mSelectedIconArray[i]) {
-//                    rotateDegree = 360 / mSelectedIconArray.length * i;
-//                }
+//        if (Math.abs(acceleration) > 10) {
+//            acceleration *= 0.9;
+//            invalidate();
+//        } else if (Math.abs(acceleration) > 1) {
+////            for (int i = 0; i < mSelectedIconArray.length; i++) {
+////                if (currentIcon == mSelectedIconArray[i]) {
+////                    rotateDegree = 360 / mSelectedIconArray.length * i;
+////                }
+////            }
+////            if (mIsRequiresUpdate) {
+////                invalidate();
+////                mIsRequiresUpdate = false;
+////            }
+//            if (acceleration > 0) {
+//                acceleration--;
 //            }
-//            if (mIsRequiresUpdate) {
-//                invalidate();
-//                mIsRequiresUpdate = false;
+//            if (acceleration < 0) {
+//                acceleration++;
 //            }
-            if (acceleration > 0) {
-                acceleration--;
-            }
-            if (acceleration < 0) {
-                acceleration++;
-            }
-            invalidate();
-        } else {
-            if (mLastSelectedIconId != currentIcon) {
-                return;
-            }
-            mLastSelectedIconId = currentIcon;
-            if (mClickListener != null) {
-                mClickListener.onClick(this);
-            }
-        }
+//            invalidate();
+//        } else {
+//            if (mLastSelectedIconId != currentIcon) {
+//                return;
+//            }
+//            mLastSelectedIconId = currentIcon;
+//            if (mClickListener != null) {
+//                mClickListener.onClick(this);
+//            }
+//        }
 
     }
 
@@ -331,9 +347,9 @@ public class TurntableView extends View implements Rotatable {
         }
 
         int length = mIconArray.length;
-        if (Math.abs(acceleration) > 100) {
-            rotateDegree += acceleration;
-        }
+        rotateDegree += acceleration;
+//        if (Math.abs(acceleration) > 1) {
+//        }
         canvas.rotate((float) rotateDegree, mCenterX, mCenterY);
         double iconLeft;
         double iconTop;
@@ -400,6 +416,11 @@ public class TurntableView extends View implements Rotatable {
                 mIsRequiresUpdate = true;
                 mIsTouchUp = false;
                 mLastTime = System.currentTimeMillis();
+                if (isFling) {
+                    removeCallbacks(mFlingRunnable);
+                    isFling = false;
+                    return true;
+                }
                 return true;
             case MotionEvent.ACTION_MOVE:
                 currentX = event.getX();
@@ -412,9 +433,8 @@ public class TurntableView extends View implements Rotatable {
                 double arcSinDegree = ((mLastX - mCenterX) * (currentY - mCenterY) - (mLastY - mCenterY) * (currentX - mCenterX)) /
                         Math.sqrt(((mLastX - mCenterX) * (mLastX - mCenterX) + (mLastY - mCenterY) * (mLastY - mCenterY)) * ((currentX - mCenterX) *
                                 (currentX - mCenterX) + (currentY - mCenterY) * (currentY - mCenterY)));
-                rotateDegree += Math.toDegrees(Math.asin(arcSinDegree));
+                rotateDegree += Math.toDegrees(Math.asin(arcSinDegree)) / 2;
                 rotateDegree %= 360;
-                //将选择的icon放大
                 mLastX = event.getX();
                 mLastY = event.getY();
                 invalidate();
@@ -424,15 +444,32 @@ public class TurntableView extends View implements Rotatable {
                 mCurrentTime = System.currentTimeMillis();
                 mVelocityTracker.computeCurrentVelocity(1);
                 mIsTouchUp = true;
-//                if (mCurrentTime - mLastTime < 100 && mVelocityTracker.getXVelocity() < 0.1 && mVelocityTracker.getYVelocity() < 0.1) {
-//                    if (mClickListener != null) {
+                currentX = event.getX();
+                currentY = event.getY();
+                if (mCurrentTime - mLastTime < 100 && mVelocityTracker.getXVelocity() < 0.1 && mVelocityTracker.getYVelocity() < 0.1 && Math.abs(currentX - mLastX) < 2 && Math.abs(currentY - mLastY) < 2 ) {
+                    //触摸的点与中心点组成向量(currentX - mCenterX) (, (mCenterY - currentY))
+//                    float degree = (float) Math.asin((currentX - mCenterX) / Math.sqrt((currentX - mCenterX) * (currentX - mCenterX) + (currentY - mCenterY) * (currentY - mCenterY)));
+                    float degree = (float) Math.toDegrees(Math.acos((mCenterY - currentY) / Math.sqrt((currentX - mCenterX) * (currentX - mCenterX) + (currentY - mCenterY) * (currentY - mCenterY))));
+                    if ((currentX - mCenterX) < 0) {
+                        degree = 360 - degree;
+                    }
+                    degree += mScreenCurrentDegree;
+                    degree %= 360;
+
+                    Log.d(TAG, "degree:" + (int) ((360 - 270) + degree + 360 / 2 / mIconArray.length) % 360 / (360 / mIconArray.length));
+                    Log.d(TAG, "degree:" + rotateDegree);
+                    Log.d(TAG, "degree:" + degree + rotateDegree);
+
+                    if (mClickListener != null) {
 //                        mClickListener.onClick(this);
-//                    }
-//                }
-                if (mVelocityTracker.getXVelocity() < 10 || mVelocityTracker.getYVelocity() < 10) {
+                    }
+                    return true;
+                }
+                if (Math.abs(mVelocityTracker.getXVelocity()) < 1 || Math.abs(mVelocityTracker.getYVelocity()) < 1) {
                     rotateDegree = (mIconArray.length - currentIconIndex) * (360 / mIconArray.length);
                     invalidate();
                 } else {
+                    Log.d(TAG, "acceleration=" + acceleration);
                     mIsClockwiseFling = calculateClockwise(mCenterX, mCenterY, event.getX(), event.getY(), mVelocityTracker.getXVelocity(), mVelocityTracker.getYVelocity());
                     updateFlingView();
                 }
@@ -462,9 +499,13 @@ public class TurntableView extends View implements Rotatable {
     }
 
     private void updateFlingView() {
-        acceleration = Math.abs(mVelocityTracker.getXVelocity() * mVelocityTracker.getYVelocity());
-        acceleration = mIsClockwiseFling? acceleration : 0 - acceleration;
-        invalidate();
+        mFlingVelocity = (float) Math.abs(mVelocityTracker.getXVelocity() * Math.sin(Math.toRadians(rotateDegree % 360)) + mVelocityTracker.getYVelocity() * Math.cos(Math.toRadians(rotateDegree % 360)));
+        mFlingVelocity =  mIsClockwiseFling? mFlingVelocity : 0 - mFlingVelocity;
+//        mFlingAcceleration = mFlingVelocity / (mCurrentTime - mLastTime) * 1000;
+        mFlingAcceleration =  mIsClockwiseFling? 0 - 2f : 2f;
+//        acceleration = mFlingAcceleration;
+        Log.d(TAG, "FlingAcceleration=" + mFlingAcceleration);
+        post(mFlingRunnable = new AutoFlingRunnable());
     }
 
     private void obtainVelocityTracker(MotionEvent event) {
@@ -559,5 +600,36 @@ public class TurntableView extends View implements Rotatable {
 
     public interface OnDragListener {
         public void onDragFinished(View view, int position);
+    }
+
+    /**
+     * 自动滚动的任务
+     *
+     */
+    private class AutoFlingRunnable implements Runnable {
+
+        public void run() {
+            isFling = true;
+            // 如果小于20,则停止
+            if ((mIsClockwiseFling && mFlingVelocity < 0) || (!mIsClockwiseFling && mFlingVelocity > 0)) {
+//            }
+//            if ((int) Math.abs(mFlingVelocity) < 16) {
+                isFling = false;
+                rotateDegree = (mIconArray.length - currentIconIndex) * (360 / mIconArray.length);
+                acceleration = 0;
+                invalidate();
+                return;
+            }
+            // 逐渐减小这个值
+//            acceleration /= 1.0666F;
+//            acceleration = 1 /2 * mFlingAcceleration * 16 * 16 / 1000 / 1000;
+            acceleration = mFlingVelocity * 16 / 32;
+            Log.d(TAG, "acceleration=" + acceleration);
+            mFlingVelocity = mFlingVelocity + mFlingAcceleration * 16 / 64;
+            Log.d(TAG, "FlingVelocity=" + mFlingVelocity);
+            // 重新绘制
+            invalidate();
+            postDelayed(this, 16);
+        }
     }
 }
