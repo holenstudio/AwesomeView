@@ -188,6 +188,7 @@ public class TurntableView extends View implements Rotatable {
      * 自动滚动时的加速度
      */
     private float mFlingAcceleration;
+    private OnItemClickListener mItemClickListener;
 
     public TurntableView(Context context) {
         this(context, null);
@@ -354,7 +355,7 @@ public class TurntableView extends View implements Rotatable {
         double iconLeft;
         double iconTop;
         Bitmap bmp = BitmapFactory.decodeResource(getResources(), mIconArray[0]);
-        int singleDegree = 360 / length;
+        float singleDegree = 360.0f / length;
         for (int i = 0; i < length; i++) {
             Bitmap icon = BitmapFactory.decodeResource(getResources(), mIconArray[i]);
             icon = ImageUtil.rotatingImageView((int) (360 - rotateDegree + singleDegree * (length - i) - mArrowPosition), icon);
@@ -456,17 +457,15 @@ public class TurntableView extends View implements Rotatable {
                     degree += mScreenCurrentDegree;
                     degree %= 360;
 
-                    Log.d(TAG, "degree:" + (int) ((360 - 270) + degree + 360 / 2 / mIconArray.length) % 360 / (360 / mIconArray.length));
-                    Log.d(TAG, "degree:" + rotateDegree);
-                    Log.d(TAG, "degree:" + degree + rotateDegree);
+                    int clickIndex = (int) ((360 - 270) + degree + 360 / 2 / mIconArray.length) % 360 / (360 / mIconArray.length);
 
-                    if (mClickListener != null) {
-//                        mClickListener.onClick(this);
+                    if (mItemClickListener != null) {
+                        mItemClickListener.onClickItem(this, clickIndex);
                     }
                     return true;
                 }
                 if (Math.abs(mVelocityTracker.getXVelocity()) < 1 || Math.abs(mVelocityTracker.getYVelocity()) < 1) {
-                    rotateDegree = (mIconArray.length - currentIconIndex) * (360 / mIconArray.length);
+                    rotateDegree = (mIconArray.length - currentIconIndex) * (360.0f / mIconArray.length);
                     invalidate();
                 } else {
                     Log.d(TAG, "acceleration=" + acceleration);
@@ -527,6 +526,9 @@ public class TurntableView extends View implements Rotatable {
 
     public void setOnDragListener(OnDragListener listener) {
         mDragListener = listener;
+    }
+    public void setOnItemClickListener(OnItemClickListener listener) {
+        mItemClickListener = listener;
     }
 
     public int getDisplayWidth() {
@@ -601,6 +603,9 @@ public class TurntableView extends View implements Rotatable {
     public interface OnDragListener {
         public void onDragFinished(View view, int position);
     }
+    public interface OnItemClickListener {
+        public void onClickItem (View view, int position);
+    }
 
     /**
      * 自动滚动的任务
@@ -615,7 +620,7 @@ public class TurntableView extends View implements Rotatable {
 //            }
 //            if ((int) Math.abs(mFlingVelocity) < 16) {
                 isFling = false;
-                rotateDegree = (mIconArray.length - currentIconIndex) * (360 / mIconArray.length);
+                rotateDegree = (mIconArray.length - currentIconIndex) * (360.0f / mIconArray.length);
                 acceleration = 0;
                 invalidate();
                 return;
@@ -629,7 +634,9 @@ public class TurntableView extends View implements Rotatable {
             Log.d(TAG, "FlingVelocity=" + mFlingVelocity);
             // 重新绘制
             invalidate();
-            postDelayed(this, 16);
+            postDelayed(this, 8);
         }
     }
+
+
 }

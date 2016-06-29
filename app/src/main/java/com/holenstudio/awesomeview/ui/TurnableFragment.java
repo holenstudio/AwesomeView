@@ -18,7 +18,7 @@ import com.holenstudio.awesomeview.view.TurntableView;
 /**
  * Created by Holen on 2016/6/14.
  */
-public class TurnableFragment extends Fragment implements View.OnClickListener {
+public class TurnableFragment extends Fragment{
     private final String TAG = "TurnableFragment";
     private TurntableView turntableView;
     private int mOrientation;
@@ -34,7 +34,6 @@ public class TurnableFragment extends Fragment implements View.OnClickListener {
             , R.drawable.flight
             , R.drawable.heart
             , R.drawable.shield
-            , R.drawable.vip
     };
     private int[] mSelectedArray = {
             R.drawable.auto_selected
@@ -48,7 +47,6 @@ public class TurnableFragment extends Fragment implements View.OnClickListener {
             , R.drawable.flight_selected
             , R.drawable.heart_selected
             , R.drawable.shield_selected
-            , R.drawable.vip_selected
     };
     private TurnableOrientationEventListener mOrientationEventListener;
 
@@ -73,7 +71,12 @@ public class TurnableFragment extends Fragment implements View.OnClickListener {
 
             }
         });
-        turntableView.setOnClickListener(this);
+        turntableView.setOnItemClickListener(new TurntableView.OnItemClickListener() {
+            @Override
+            public void onClickItem(View view, int position) {
+                Toast.makeText(getContext(), "position:" + position, Toast.LENGTH_SHORT).show();
+            }
+        });
         mOrientationEventListener = new TurnableOrientationEventListener(getContext());
 
         return view;
@@ -89,18 +92,6 @@ public class TurnableFragment extends Fragment implements View.OnClickListener {
     public void onPause() {
         super.onPause();
         mOrientationEventListener.disable();
-    }
-
-    @Override
-    public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.turntable_view :
-                Toast.makeText(getContext(), "a", Toast.LENGTH_SHORT).show();
-
-                break;
-            default:
-                break;
-        }
     }
 
     public class TurnableOrientationEventListener extends OrientationEventListener {
