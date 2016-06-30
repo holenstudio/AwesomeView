@@ -13,6 +13,7 @@ import android.widget.Toast;
 
 import com.holenstudio.awesomeview.R;
 import com.holenstudio.awesomeview.util.ImageUtil;
+import com.holenstudio.awesomeview.util.VibratorUtil;
 import com.holenstudio.awesomeview.view.TurntableView;
 
 /**
@@ -68,7 +69,7 @@ public class TurnableFragment extends Fragment{
         turntableView.setOnDragListener(new TurntableView.OnDragListener() {
             @Override
             public void onDragFinished(View view, int position) {
-
+                VibratorUtil.Vibrate(getActivity(), 50);
             }
         });
         turntableView.setOnItemClickListener(new TurntableView.OnItemClickListener() {
