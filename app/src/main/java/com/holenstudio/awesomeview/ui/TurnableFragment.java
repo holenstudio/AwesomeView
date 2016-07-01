@@ -69,7 +69,7 @@ public class TurnableFragment extends Fragment{
         turntableView.setOnDragListener(new TurntableView.OnDragListener() {
             @Override
             public void onDragFinished(View view, int position) {
-                VibratorUtil.Vibrate(getActivity(), 50);
+                VibratorUtil.Vibrate(getContext(), 50);
             }
         });
         turntableView.setOnItemClickListener(new TurntableView.OnItemClickListener() {

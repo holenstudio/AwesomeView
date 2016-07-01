@@ -21,6 +21,7 @@ import android.view.animation.AnimationUtils;
 
 import com.holenstudio.awesomeview.R;
 import com.holenstudio.awesomeview.util.ImageUtil;
+import com.holenstudio.awesomeview.util.VibratorUtil;
 
 /**
  * 可转动的圆形自定义控件，类似于单反相机中调整参数的那个转盘。
@@ -30,7 +31,7 @@ public class TurntableView extends View implements Rotatable {
     private final String TAG = "TurntableView";
     private static final float ENABLED_ALPHA = 1;
     private static final float DISABLED_ALPHA = 0.4f;
-    private static final int ANIMATION_SPEED = 270; // 270 deg/sec
+    private static final int ANIMATION_SPEED = 360; // 270 deg/sec
 
     private Context mContext;
     /**
@@ -126,7 +127,7 @@ public class TurntableView extends View implements Rotatable {
     /**
      * 是否启用放大已选中图标
      */
-    private boolean mIsZoomOutSelectedIcon = false;
+    private boolean mIsZoomOutSelectedIcon = true;
     /**
      * 图标旋转的角度，也就是拖拽的时候每一次旋转的角度
      */
@@ -204,7 +205,7 @@ public class TurntableView extends View implements Rotatable {
         mInnerRadius = ta.getFloat(R.styleable.AwesomeView_innerRadius, 50);
         mArrowPosition = ta.getInt(R.styleable.AwesomeView_arrowPosition, 0);
         mArrowSrc = ta.getResourceId(R.styleable.AwesomeView_arrowSrc, R.drawable.arrow_to_down);
-        mSelectedIconZoomRate = ta.getFloat(R.styleable.AwesomeView_selectedIconZoomRate, 2.0f);
+        mSelectedIconZoomRate = ta.getFloat(R.styleable.AwesomeView_selectedIconZoomRate, 1.4f);
         init();
     }
 
@@ -282,13 +283,14 @@ public class TurntableView extends View implements Rotatable {
         canvas.rotate(mArrowPosition, mCenterX, mCenterY);
         mPaint.setStyle(Paint.Style.FILL);//充满
         mPaint.setColor(Color.RED);
-        float tmpRadius = (float) (mOuterRadius * Math.sin(Math.toRadians(360.0f / mIconArray.length / 4)));
+        float arcWidth = 360.0f / mIconArray.length / 3;
+        float tmpRadius = (float) (mOuterRadius * Math.sin(Math.toRadians(arcWidth)));
         Path path = new Path();
-        path.moveTo(mCenterX - tmpRadius, (float) (mCenterY - mOuterRadius * Math.cos(Math.toRadians(360.0 / mIconArray.length / 4))));
+        path.moveTo(mCenterX - tmpRadius, (float) (mCenterY - mOuterRadius * Math.cos(Math.toRadians(arcWidth))));
         //startAngle的0度是在3点方向，所以还原到顶点的话需要减去90度
-        path.arcTo(mCenterX - mOuterRadius, mCenterY - mOuterRadius, mCenterX + mOuterRadius, mCenterY + mOuterRadius, 0 - 90 -  360.0f / mIconArray.length / 4, 360.0f / mIconArray.length / 4 * 2, false);
-        path.lineTo(mCenterX + tmpRadius, (float) (mCenterY - mOuterRadius * Math.cos(Math.toRadians(360.0 / mIconArray.length / 4))) + 2 * tmpRadius);
-        path.arcTo(mCenterX - tmpRadius, (float) (mCenterY - mOuterRadius * Math.cos(Math.toRadians(360.0 / mIconArray.length / 4))) + tmpRadius, mCenterX + tmpRadius, (float) (mCenterY - mOuterRadius * Math.cos(Math.toRadians(360.0 / mIconArray.length / 4)) + 3 * tmpRadius), 0, 180, false);
+        path.arcTo(mCenterX - mOuterRadius, mCenterY - mOuterRadius, mCenterX + mOuterRadius, mCenterY + mOuterRadius, 0 - 90 -  arcWidth, arcWidth * 2, false);
+        path.lineTo(mCenterX + tmpRadius, (float) (mCenterY - mOuterRadius * Math.cos(Math.toRadians(arcWidth))) + 2 * tmpRadius);
+        path.arcTo(mCenterX - tmpRadius, (float) (mCenterY - mOuterRadius * Math.cos(Math.toRadians(arcWidth))) + tmpRadius, mCenterX + tmpRadius, (float) (mCenterY - mOuterRadius * Math.cos(Math.toRadians(arcWidth)) + 3 * tmpRadius), 0, 180, false);
         path.close();
         canvas.drawPath(path, mPaint);
         mPaint.setStyle(Paint.Style.STROKE);
@@ -414,8 +416,11 @@ public class TurntableView extends View implements Rotatable {
                 double arcSinDegree = ((mLastX - mCenterX) * (currentY - mCenterY) - (mLastY - mCenterY) * (currentX - mCenterX)) /
                         Math.sqrt(((mLastX - mCenterX) * (mLastX - mCenterX) + (mLastY - mCenterY) * (mLastY - mCenterY)) * ((currentX - mCenterX) *
                                 (currentX - mCenterX) + (currentY - mCenterY) * (currentY - mCenterY)));
-                rotateDegree += Math.toDegrees(Math.asin(arcSinDegree)) / 2;
+                rotateDegree += Math.toDegrees(Math.asin(arcSinDegree));
                 rotateDegree %= 360;
+                if ((int) rotateDegree % 10 == 0) {
+                    VibratorUtil.Vibrate(getContext(), 5);
+                }
                 mLastX = event.getX();
                 mLastY = event.getY();
                 invalidate();
@@ -514,7 +519,7 @@ public class TurntableView extends View implements Rotatable {
         float singleDegree = 360.0f / length;
         for (int i = 0; i < array.length; i++) {
             mIconBmpArray[i] = BitmapFactory.decodeResource(getResources(), array[i]);
-//            mIconBmpArray[i] = ImageUtil.rotatingImageView((int) (360 - rotateDegree + singleDegree * (length - i) - mArrowPosition), mIconBmpArray[i]);
+            mIconBmpArray[i] = ImageUtil.rotatingImageView((int) (360 - rotateDegree + singleDegree * length - mArrowPosition), mIconBmpArray[i]);
         }
         invalidate();
     }
@@ -585,6 +590,14 @@ public class TurntableView extends View implements Rotatable {
         if (!mIsFling && mIsTouchUp && mItemClickListener != null) {
             mItemClickListener.onClickItem(this, position);
         }
+    }
+
+    public void show() {
+        setVisibility(View.VISIBLE);
+    }
+
+    public void hide() {
+        setVisibility(View.GONE);
     }
 
     /**
@@ -659,8 +672,8 @@ public class TurntableView extends View implements Rotatable {
                 mOffsetDegree = mFlingVelocity * 16 / 32;
                 mFlingVelocity = mFlingVelocity + mFlingAcceleration * 16 / 64;
             } else {
-                mOffsetDegree = mIsClockwiseFling? 4 : -4;
-                mFlingVelocity += mIsClockwiseFling? -4 : 4;
+                mOffsetDegree = mIsClockwiseFling? 6 : -6;
+                mFlingVelocity += mIsClockwiseFling? -6 : 6;
             }
             // 重新绘制
             invalidate();
