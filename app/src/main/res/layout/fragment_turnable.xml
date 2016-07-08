@@ -10,6 +10,94 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.holenstudio.awesomeview.MainActivity">
 
+    <TableLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="50dp">
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="3"
+                android:layout_height="wrap_content"
+                android:text="outer radius"/>
+            <TextView
+                android:id="@+id/outer_radius_value"
+                android:layout_width="0dp"
+                android:layout_weight="3"
+                android:layout_height="wrap_content"
+                android:text="1" />
+            <SeekBar
+                android:id="@+id/outer_radius_seekbar"
+                android:layout_width="0dp"
+                android:layout_weight="16"
+                android:layout_height="40dp"/>
+        </TableRow>
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="3"
+                android:layout_height="wrap_content"
+                android:text="inner radius"/>
+            <TextView
+                android:id="@+id/inner_radius_value"
+                android:layout_width="0dp"
+                android:layout_weight="3"
+                android:layout_height="wrap_content"
+                android:text="1" />
+            <SeekBar
+                android:id="@+id/inner_radius_seekbar"
+                android:layout_width="0dp"
+                android:layout_weight="16"
+                android:layout_height="40dp"/>
+        </TableRow>
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="3"
+                android:layout_height="wrap_content"
+                android:text="vibrate time"/>
+            <TextView
+                android:id="@+id/vibrate_time_value"
+                android:layout_width="0dp"
+                android:layout_weight="3"
+                android:layout_height="wrap_content"
+                android:text="1" />
+            <SeekBar
+                android:id="@+id/vibrate_time_seekbar"
+                android:layout_width="0dp"
+                android:layout_weight="16"
+                android:layout_height="40dp"/>
+        </TableRow>
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="3"
+                android:layout_height="wrap_content"
+                android:text="accele-ration"/>
+            <TextView
+                android:id="@+id/acceleration_value"
+                android:layout_width="0dp"
+                android:layout_weight="3"
+                android:layout_height="wrap_content"
+                android:text="1" />
+            <SeekBar
+                android:id="@+id/acceleration_seekbar"
+                android:layout_width="0dp"
+                android:layout_weight="16"
+                android:layout_height="40dp"/>
+        </TableRow>
+    </TableLayout>
     <com.holenstudio.awesomeview.view.TurntableView
         android:id="@+id/turntable_view"
         android:layout_width="300dp"

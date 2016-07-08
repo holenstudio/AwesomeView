@@ -12,7 +12,6 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PathEffect;
 import android.os.Build;
-import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -29,7 +28,7 @@ import com.holenstudio.awesomeview.util.VibratorUtil;
  * 可转动的圆形自定义控件，类似于单反相机中调整参数的那个转盘。
  * Created by Holen on 2016/6/12.
  */
-public class TurntableView extends View implements Rotatable {
+public class TurntableView_backup extends View implements Rotatable {
     private final String TAG = "TurntableView";
     private static final float ENABLED_ALPHA = 1;
     private static final float DISABLED_ALPHA = 0.4f;
@@ -109,11 +108,11 @@ public class TurntableView extends View implements Rotatable {
     /**
      * 当前选中的图标资源索引
      */
-    private int mCurrentIconIndex;
+    private int currentIconIndex;
     /**
      * 拖拽的监听器
      */
-    private OnSelectItemListener mSeletectItemListener;
+    private OnDragListener mDragListener;
     /**
      * 箭头的位置，也就是图标起点的位置。范围为0~360，顶部为0，顺时针方向
      */
@@ -157,10 +156,6 @@ public class TurntableView extends View implements Rotatable {
      */
     private float mOffsetDegree = 0.0f;
     /**
-     * 一次旋转中总偏移量
-     */
-    private float mOffsetTotalDegree = 0.0f;
-    /**
      * 判断是否正在自动滚动
      */
     private boolean mIsFling;
@@ -177,14 +172,17 @@ public class TurntableView extends View implements Rotatable {
      */
     private float mSelectedIconZoomRate;
     /**
-     * 在fling过程中上一次选中的图标索引
+     * 上一次选中的图标索引
      */
-    private int mLastFlingSelectedIconIndex;
+    private int mLastSelectedIconIndex;
     /**
      * 自动滚动的Runnable
      */
     private AutoFlingRunnable mFlingRunnable;
-
+    /**
+     * 自动滚动时的速度
+     */
+    private float mFlingVelocity;
     /**
      * 自动滚动时的速度的偏转量
      */
@@ -193,25 +191,17 @@ public class TurntableView extends View implements Rotatable {
      * 自动滚动时的加速度
      */
     private float mFlingAcceleration = 0;
-    /**
-     * 震动时间
-     */
-    private int mVibratorTime = 20;
-    private float mAccelerator = 1.066f;
-    /**
-     * 上一次选中的图标索引
-     */
-    private int mLastSelectedIconIndex = 0;
+    private OnItemClickListener mItemClickListener;
 
-    public TurntableView(Context context) {
+    public TurntableView_backup(Context context) {
         this(context, null);
     }
 
-    public TurntableView(Context context, AttributeSet attrs) {
+    public TurntableView_backup(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
     }
 
-    public TurntableView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public TurntableView_backup(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
 
         mContext = context;
@@ -226,21 +216,11 @@ public class TurntableView extends View implements Rotatable {
 
     private void init() {
         mRadius = (mOuterRadius + mInnerRadius) / 2;
-        mCurrentIconIndex = 0;
+        currentIconIndex = 0;
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaint.setColor(Color.BLUE);
         mPaint.setStyle(Paint.Style.STROKE); // 设置空心
         mPaint.setStrokeWidth(1.0f);
-    }
-
-    @Override
-    protected Parcelable onSaveInstanceState() {
-        return super.onSaveInstanceState();
-    }
-
-    @Override
-    protected void onRestoreInstanceState(Parcelable state) {
-        super.onRestoreInstanceState(state);
     }
 
     @Override
@@ -289,7 +269,7 @@ public class TurntableView extends View implements Rotatable {
         drawArrow(canvas);
         updateCanvas(canvas);
 
-        Log.d(TAG, " draw:" + (System.currentTimeMillis() - a) + "currentIdIndex=" + mCurrentIconIndex);
+        Log.d(TAG, " draw:" + (System.currentTimeMillis() - a) + "currentIdIndex=" + currentIconIndex);
         super.onDraw(canvas);
     }
 
@@ -397,15 +377,11 @@ public class TurntableView extends View implements Rotatable {
      */
     private void drawSelectedIcon(Canvas canvas) {
         selecteIcon();
-        Bitmap seletedBmp = mSelectedIconBmpArray[mCurrentIconIndex];
+        Bitmap seletedBmp = mSelectedIconBmpArray[currentIconIndex];
         canvas.drawBitmap(seletedBmp, mCenterX - seletedBmp.getWidth() / 2, mCenterY - seletedBmp.getHeight() / 2, mPaint);
-        if (mCurrentIconIndex != mLastFlingSelectedIconIndex) {
-            VibratorUtil.Vibrate(getContext(), mVibratorTime);
-            mLastFlingSelectedIconIndex = mCurrentIconIndex;
-        }
-        if (!mIsFling && mIsTouchUp && (mCurrentIconIndex != mLastSelectedIconIndex)) {
-            mLastSelectedIconIndex = mCurrentIconIndex;
-            invokeSelectItemListener();
+        if (currentIconIndex != mLastSelectedIconIndex) {
+            VibratorUtil.Vibrate(getContext(), 10);
+            mLastSelectedIconIndex = currentIconIndex;
         }
     }
 
@@ -416,7 +392,7 @@ public class TurntableView extends View implements Rotatable {
         for (int i = 0; i < length; i++) {
             position = (int) (360 + rotateDegree + 360.0f / length * i + mArrowPosition) % 360;
             if (Math.abs(position - mArrowPosition) < (360.0f / length / 2) || Math.abs(position - mArrowPosition) > (360 - 360.0f / length / 2)) {
-                mCurrentIconIndex = i;
+                currentIconIndex = i;
             }
         }
     }
@@ -435,8 +411,8 @@ public class TurntableView extends View implements Rotatable {
                 mIsTouchUp = false;
                 mLastTime = System.currentTimeMillis();
                 if (mIsFling) {
-//                    removeCallbacks(mFlingRunnable);
-//                    mIsFling = false;
+                    removeCallbacks(mFlingRunnable);
+                    mIsFling = false;
                 }
                 return true;
             case MotionEvent.ACTION_MOVE:
@@ -451,7 +427,6 @@ public class TurntableView extends View implements Rotatable {
                         Math.sqrt(((mLastX - mCenterX) * (mLastX - mCenterX) + (mLastY - mCenterY) * (mLastY - mCenterY)) * ((currentX - mCenterX) *
                                 (currentX - mCenterX) + (currentY - mCenterY) * (currentY - mCenterY)));
                 rotateDegree += Math.toDegrees(Math.asin(arcSinDegree)) / 2;
-                mOffsetTotalDegree += Math.toDegrees(Math.asin(arcSinDegree)) / 2;
                 rotateDegree %= 360;
                 mLastX = event.getX();
                 mLastY = event.getY();
@@ -459,60 +434,56 @@ public class TurntableView extends View implements Rotatable {
 
                 break;
             case MotionEvent.ACTION_UP:
-                mIsTouchUp = true;
-                mIsFling = true;
                 mCurrentTime = System.currentTimeMillis();
                 mVelocityTracker.computeCurrentVelocity(1);
+                mIsTouchUp = true;
                 currentX = event.getX();
                 currentY = event.getY();
-                if (Math.abs((mVelocityTracker.getXVelocity())) > 0.5 || Math.abs(mVelocityTracker.getYVelocity()) > 0.5) {
-                    updateFlingView(mVelocityTracker.getXVelocity(), mVelocityTracker.getYVelocity());
-                } else if (mCurrentTime - mLastTime < 300 && Math.abs(currentX - mLastX) < 2 && Math.abs(currentY - mLastY) < 2 ) {
-                    //handle click event
-                    mIsFling = false;
-                    if (Math.sqrt((currentX - mCenterX) * (currentX - mCenterX) + (currentY - mCenterY) * (currentY - mCenterY)) > mOuterRadius) {
-                        //TODO click out of circle
-                    } else if (Math.sqrt((currentX - mCenterX) * (currentX - mCenterX) + (currentY - mCenterY) * (currentY - mCenterY)) < mInnerRadius) {
-                        // TODO click inner of circle
-                    } else {
-                        handleClickEvent(currentX, currentY);
+                if (mCurrentTime - mLastTime < 100 && mVelocityTracker.getXVelocity() < 0.1 && mVelocityTracker.getYVelocity() < 0.1 && Math.abs(currentX - mLastX) < 2 && Math.abs(currentY - mLastY) < 2 ) {
+                    //触摸的点与中心点组成向量(currentX - mCenterX) (, (mCenterY - currentY))
+                    float degree = (float) Math.toDegrees(Math.acos((mCenterY - currentY) / Math.sqrt((currentX - mCenterX) * (currentX - mCenterX) + (currentY - mCenterY) * (currentY - mCenterY))));
+                    if ((currentX - mCenterX) < 0) {
+                        degree = 360 - degree;
                     }
-                } else {
-                    rotateDegree = (mIconArray.length - mCurrentIconIndex) * (360.0f / mIconArray.length);
-                    mIsFling = false;
-                    invalidate();
+                    degree += mScreenCurrentDegree;
+                    degree %= 360;
+                    int clickIndex = (int) ((360 - 270) + 360 - rotateDegree + degree + 360 / 2 / mIconArray.length) % 360 / (360 / mIconArray.length);
+                    boolean clockwise = degree >90 && degree < 270;
+                    float flingDegree;
+//                    if (degree > 0 && degree < 90) {
+//                        flingDegree = 360 + degree - 270;
+//                    } else {
+//                        flingDegree = Math.min(Math.abs(degree - 270), Math.abs(270 - degree));
+//                    }
+                    int offsetIndex;
+                    if (clockwise) {
+                        offsetIndex = currentIconIndex - clickIndex;
+                    } else {
+                        offsetIndex = clickIndex - currentIconIndex;
+                    }
+                    if (offsetIndex < 0) {
+                        offsetIndex += mIconArray.length;
+                    }
+                    flingDegree = 360.0f / mIconArray.length * offsetIndex * (clockwise? 1 : -1);
+                    Log.d(TAG, "flingDegree = " + flingDegree + "clockwise = " + clockwise);
+                    post(mFlingRunnable = new AutoFlingRunnable(flingDegree, false, clockwise));
+                    invokeItemClickListener(clickIndex);
+                    return true;
                 }
-                mOffsetTotalDegree = 0.0f;
+                if (Math.abs(mVelocityTracker.getXVelocity()) < 1 || Math.abs(mVelocityTracker.getYVelocity()) < 1) {
+                    rotateDegree = (mIconArray.length - currentIconIndex) * (360.0f / mIconArray.length);
+                    invalidate();
+                    invokeDragListener();
+                } else {
+                    boolean isClockwiseFling = calculateClockwise(mCenterX, mCenterY, event.getX(), event.getY(), mVelocityTracker.getXVelocity(), mVelocityTracker.getYVelocity());
+                    updateFlingView(isClockwiseFling);
+                }
+
                 return true;
 
         }
 
         return super.onTouchEvent(event);
-    }
-
-    private void handleClickEvent(float currentX, float currentY) {
-        //触摸的点与中心点组成向量(currentX - mCenterX) (, (mCenterY - currentY))
-        float degree = (float) Math.toDegrees(Math.acos((mCenterY - currentY) / Math.sqrt((currentX - mCenterX) * (currentX - mCenterX) + (currentY - mCenterY) * (currentY - mCenterY))));
-        if ((currentX - mCenterX) < 0) {
-            degree = 360 - degree;
-        }
-        degree += mScreenCurrentDegree;
-        degree %= 360;
-        int clickIndex = (int) ((360 - 270) + 360 - rotateDegree + degree + 360 / 2 / mIconArray.length) % 360 / (360 / mIconArray.length);
-        boolean clockwise = degree >90 && degree < 270;
-        float flingDegree;
-        int offsetIndex;
-        if (clockwise) {
-            offsetIndex = mCurrentIconIndex - clickIndex;
-        } else {
-            offsetIndex = clickIndex - mCurrentIconIndex;
-        }
-        if (offsetIndex < 0) {
-            offsetIndex += mIconArray.length;
-        }
-        flingDegree = 360.0f / mIconArray.length * offsetIndex * (clockwise? 1 : -1);
-        Log.d(TAG, "flingDegree = " + flingDegree + "clockwise = " + clockwise);
-        post(mFlingRunnable = new AutoFlingRunnable(flingDegree, false, clockwise));
     }
 
     /**
@@ -532,16 +503,12 @@ public class TurntableView extends View implements Rotatable {
         return area < 0;
     }
 
-    private void updateFlingView(float xVelocity, float yVelocity) {
-        float flingDegree = (float) ((mOffsetTotalDegree * 1000) / (mCurrentTime * 1.0 - mLastTime * 1.0));
-        if (Math.abs(flingDegree) < 10 && (Math.abs(xVelocity) > 10 || Math.abs(yVelocity) > 10)) {
-            float velocity = Math.max(Math.abs(xVelocity), Math.abs(yVelocity));
-            flingDegree = velocity * velocity;
-            if (mOffsetTotalDegree < 0) {
-                flingDegree = 0 - flingDegree;
-            }
-        }
-        post(mFlingRunnable = new AutoFlingRunnable(flingDegree, true, true));
+    private void updateFlingView(boolean isClockwiseFling) {
+        mFlingVelocity = (float) Math.abs(mVelocityTracker.getXVelocity() * Math.sin(Math.toRadians(rotateDegree % 360)) + mVelocityTracker.getYVelocity() * Math.cos(Math.toRadians(rotateDegree % 360)));
+//        mFlingVelocity = (float) Math.abs(mVelocityTracker.getXVelocity() * Math.sin(Math.toRadians(rotateDegree % 360)) + mVelocityTracker.getYVelocity());
+        mFlingVelocity =  isClockwiseFling? mFlingVelocity : 0 - mFlingVelocity;
+        mFlingOffset = mFlingVelocity;
+        post(mFlingRunnable = new AutoFlingRunnable(mFlingVelocity, true, isClockwiseFling));
     }
 
     private void obtainVelocityTracker(MotionEvent event) {
@@ -580,8 +547,11 @@ public class TurntableView extends View implements Rotatable {
         invalidate();
     }
 
-    public void setOnSelectItemListener(OnSelectItemListener listener) {
-        mSeletectItemListener = listener;
+    public void setOnDragListener(OnDragListener listener) {
+        mDragListener = listener;
+    }
+    public void setOnItemClickListener(OnItemClickListener listener) {
+        mItemClickListener = listener;
     }
 
     public int getDisplayWidth() {
@@ -619,9 +589,15 @@ public class TurntableView extends View implements Rotatable {
         mFilterEnabled = enabled;
     }
 
-    public void invokeSelectItemListener() {
-        if (!mIsFling && mIsTouchUp && mSeletectItemListener != null) {
-            mSeletectItemListener.onSelected(this, mCurrentIconIndex);
+    public void invokeDragListener() {
+        if (!mIsFling && mIsTouchUp && mDragListener != null) {
+            mDragListener.onDragFinished(this, currentIconIndex);
+        }
+    }
+
+    public void invokeItemClickListener(int position) {
+        if (!mIsFling && mIsTouchUp && mItemClickListener != null) {
+            mItemClickListener.onClickItem(this, position);
         }
     }
 
@@ -667,16 +643,11 @@ public class TurntableView extends View implements Rotatable {
         invalidate();
     }
 
-    public interface OnSelectItemListener {
-        public void onSelected(View view, int position);
+    public interface OnDragListener {
+        public void onDragFinished(View view, int position);
     }
-
-    public void setVibratorTime (int time) {
-        mVibratorTime = time;
-    }
-
-    public void setAccelerator (float accelerator) {
-        mAccelerator = accelerator;
+    public interface OnItemClickListener {
+        public void onClickItem(View view, int position);
     }
 
     /**
@@ -698,22 +669,22 @@ public class TurntableView extends View implements Rotatable {
             mIsFling = true;
 //            mFlingAcceleration =  mIsClockwiseFling? 0 - 2f : 2f;
             DecelerateInterpolator interpolator = new DecelerateInterpolator();
-            if ((int) Math.abs(mFlingVelocity) < 5) {
+
+            if ((mIsClockwiseFling && mFlingVelocity <= 0) || (!mIsClockwiseFling && mFlingVelocity >= 0 )) {
                 mIsFling = false;
-                mIsTouchUp = true;
-                rotateDegree = (mIconArray.length - mCurrentIconIndex) * (360.0f / mIconArray.length);
+                rotateDegree = (mIconArray.length - currentIconIndex) * (360.0f / mIconArray.length);
                 mOffsetDegree = 0;
                 mFlingAcceleration = 0;
                 invalidate();
+                invokeDragListener();
                 return;
             }
             if (mIsGradient) {
                 // 逐渐减小这个值
-                mOffsetDegree = mFlingVelocity / 1.066f / 30;
-                mFlingVelocity /= mAccelerator;
+                mOffsetDegree = mFlingVelocity * 16 / 32;
 //                mFlingVelocity = mFlingVelocity + mFlingAcceleration * 16 / 64;
-//                mFlingAcceleration += 0.08;
-//                mFlingVelocity = mFlingOffset * interpolator.getInterpolation(mFlingAcceleration);
+                mFlingAcceleration += 0.08;
+                mFlingVelocity = mFlingOffset * interpolator.getInterpolation(mFlingAcceleration);
             } else {
                 mOffsetDegree = mIsClockwiseFling? 6 : -6;
                 mFlingVelocity += mIsClockwiseFling? -6 : 6;
