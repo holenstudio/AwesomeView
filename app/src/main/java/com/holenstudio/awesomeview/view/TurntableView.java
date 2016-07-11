@@ -25,6 +25,8 @@ import com.holenstudio.awesomeview.R;
 import com.holenstudio.awesomeview.util.ImageUtil;
 import com.holenstudio.awesomeview.util.VibratorUtil;
 
+import java.util.List;
+
 /**
  * 可转动的圆形自定义控件，类似于单反相机中调整参数的那个转盘。
  * Created by Holen on 2016/6/12.
@@ -91,22 +93,6 @@ public class TurntableView extends View implements Rotatable {
     private int mWidth;
     private int mHeight;
     /**
-     * 圆上图标的资源id数组
-     */
-    private int[] mIconArray;
-    /**
-     * 圆上图标的bmp数组
-     */
-    private Bitmap[] mIconBmpArray;
-    /**
-     * 选中的图标的资源id数组
-     */
-    private int[] mSelectedIconArray;
-    /**
-     * 选中的图标的bmp数组
-     */
-    private Bitmap[] mSelectedIconBmpArray;
-    /**
      * 当前选中的图标资源索引
      */
     private int mCurrentIconIndex;
@@ -164,6 +150,7 @@ public class TurntableView extends View implements Rotatable {
      * 判断是否正在自动滚动
      */
     private boolean mIsFling;
+    private boolean mIsFront = false;
     /**
      * 记录手指在view中上次操作时的时间
      */
@@ -192,16 +179,19 @@ public class TurntableView extends View implements Rotatable {
     /**
      * 自动滚动时的加速度
      */
-    private float mFlingAcceleration = 0;
+    private float mFlingAcceleration = 1.066f;
     /**
      * 震动时间
      */
     private int mVibratorTime = 20;
-    private float mAccelerator = 1.066f;
     /**
      * 上一次选中的图标索引
      */
     private int mLastSelectedIconIndex = 0;
+    /**
+     * 图标实体list
+     */
+    private List<Entity> mEntities;
 
     public TurntableView(Context context) {
         this(context, null);
@@ -309,7 +299,7 @@ public class TurntableView extends View implements Rotatable {
         canvas.rotate(mArrowPosition, mCenterX, mCenterY);
         mPaint.setStyle(Paint.Style.FILL);//充满
         mPaint.setColor(Color.RED);
-        float arcWidth = 360.0f / mIconArray.length / 3;
+        float arcWidth = 360.0f / mEntities.size() / 3;
         float tmpRadius = (float) (mOuterRadius * Math.sin(Math.toRadians(arcWidth)));
         Path path = new Path();
         path.moveTo(mCenterX - tmpRadius, (float) (mCenterY - mOuterRadius * Math.cos(Math.toRadians(arcWidth))));
@@ -356,19 +346,24 @@ public class TurntableView extends View implements Rotatable {
      */
     private void drawIcons(Canvas canvas) {
         canvas.save();
-        if (mIconArray == null || mIconArray.length <= 0) {
+        if (mEntities == null || mEntities.size() == 0) {
             return;
         }
 
-        int length = mIconArray.length;
+        int size = mEntities.size();
         rotateDegree += mOffsetDegree;
         canvas.rotate((float) rotateDegree, mCenterX, mCenterY);
         double iconLeft;
         double iconTop;
-        float singleDegree = 360.0f / length;
-        for (int i = 0; i < length; i++) {
+        float singleDegree = 360.0f / size;
+        for (int i = 0; i < size; i++) {
 //            Bitmap icon = ImageUtil.rotatingImageView((int) (360 - rotateDegree + singleDegree * (length - i) - mArrowPosition), mIconBmpArray[i]);
-            Bitmap icon = mIconBmpArray[i];
+            Bitmap icon;
+            if (mIsFront && !mEntities.get(i).frontDisable) {
+                icon = mEntities.get(i).disabledBmp;
+            } else {
+                icon = mEntities.get(i).normalBmp;
+            }
             iconLeft = mCenterX - icon.getWidth() / 2;
             iconTop = mCenterY - mRadius - icon.getHeight() / 2;
             if (mIsZoomOutSelectedIcon) {
@@ -385,7 +380,7 @@ public class TurntableView extends View implements Rotatable {
                 }
             }
             canvas.drawBitmap(icon, (float) iconLeft, (float) iconTop, mPaint);
-            canvas.rotate(360.0f / length, mCenterX, mCenterY);
+            canvas.rotate(360.0f / size, mCenterX, mCenterY);
         }
         canvas.restore();
     }
@@ -397,7 +392,12 @@ public class TurntableView extends View implements Rotatable {
      */
     private void drawSelectedIcon(Canvas canvas) {
         selecteIcon();
-        Bitmap seletedBmp = mSelectedIconBmpArray[mCurrentIconIndex];
+        Bitmap seletedBmp;
+        if (mIsFront && mEntities.get(mCurrentIconIndex).frontDisable) {
+            seletedBmp = mEntities.get(mLastSelectedIconIndex).selectedBmp;
+        } else {
+            seletedBmp = mEntities.get(mCurrentIconIndex).selectedBmp;
+        }
         canvas.drawBitmap(seletedBmp, mCenterX - seletedBmp.getWidth() / 2, mCenterY - seletedBmp.getHeight() / 2, mPaint);
         if (mCurrentIconIndex != mLastFlingSelectedIconIndex) {
             VibratorUtil.Vibrate(getContext(), mVibratorTime);
@@ -405,17 +405,17 @@ public class TurntableView extends View implements Rotatable {
         }
         if (!mIsFling && mIsTouchUp && (mCurrentIconIndex != mLastSelectedIconIndex)) {
             mLastSelectedIconIndex = mCurrentIconIndex;
-            invokeSelectItemListener();
+            invokeSelectItem();
         }
     }
 
     private void selecteIcon() {
         //第i个图标所在的位置
         int position;
-        int length = mIconArray.length;
-        for (int i = 0; i < length; i++) {
-            position = (int) (360 + rotateDegree + 360.0f / length * i + mArrowPosition) % 360;
-            if (Math.abs(position - mArrowPosition) < (360.0f / length / 2) || Math.abs(position - mArrowPosition) > (360 - 360.0f / length / 2)) {
+        int size = mEntities.size();
+        for (int i = 0; i < size; i++) {
+            position = (int) (360 + rotateDegree + 360.0f / size * i + mArrowPosition) % 360;
+            if (Math.abs(position - mArrowPosition) < (360.0f / size / 2) || Math.abs(position - mArrowPosition) > (360 - 360.0f / size / 2)) {
                 mCurrentIconIndex = i;
             }
         }
@@ -474,13 +474,13 @@ public class TurntableView extends View implements Rotatable {
                         //TODO click out of circle
                     } else if (Math.sqrt((currentX - mCenterX) * (currentX - mCenterX) + (currentY - mCenterY) * (currentY - mCenterY)) < mInnerRadius) {
                         // TODO click inner of circle
+                        invokeClickInnerCircle();
                     } else {
                         handleClickEvent(currentX, currentY);
                     }
                 } else {
-                    rotateDegree = (mIconArray.length - mCurrentIconIndex) * (360.0f / mIconArray.length);
                     mIsFling = false;
-                    invalidate();
+                    handleDragEvent();
                 }
                 mOffsetTotalDegree = 0.0f;
                 return true;
@@ -488,6 +488,29 @@ public class TurntableView extends View implements Rotatable {
         }
 
         return super.onTouchEvent(event);
+    }
+
+    private void invokeClickInnerCircle() {
+        if (!mIsFling && mIsTouchUp && mSeletectItemListener != null) {
+            mSeletectItemListener.onClickInnerCircle();
+        }
+    }
+
+    private void handleDragEvent() {
+        setRotateDegree((mEntities.size() - mCurrentIconIndex) * (360.0f / mEntities.size()));
+    }
+
+    private void setRotateDegree(float degree) {
+        rotateDegree = degree;
+        invalidate();
+    }
+
+    public void setRotateIndex(int index) {
+        int size = mEntities.size();
+        if (index < 0 || index > size) {
+            return;
+        }
+        setRotateDegree((size - index) * (360.0f / size));
     }
 
     private void handleClickEvent(float currentX, float currentY) {
@@ -498,7 +521,7 @@ public class TurntableView extends View implements Rotatable {
         }
         degree += mScreenCurrentDegree;
         degree %= 360;
-        int clickIndex = (int) ((360 - 270) + 360 - rotateDegree + degree + 360 / 2 / mIconArray.length) % 360 / (360 / mIconArray.length);
+        int clickIndex = (int) ((360 - 270) + 360 - rotateDegree + degree + 360 / 2 / mEntities.size()) % 360 / (360 / mEntities.size());
         boolean clockwise = degree >90 && degree < 270;
         float flingDegree;
         int offsetIndex;
@@ -508,9 +531,9 @@ public class TurntableView extends View implements Rotatable {
             offsetIndex = clickIndex - mCurrentIconIndex;
         }
         if (offsetIndex < 0) {
-            offsetIndex += mIconArray.length;
+            offsetIndex += mEntities.size();
         }
-        flingDegree = 360.0f / mIconArray.length * offsetIndex * (clockwise? 1 : -1);
+        flingDegree = 360.0f / mEntities.size() * offsetIndex * (clockwise? 1 : -1);
         Log.d(TAG, "flingDegree = " + flingDegree + "clockwise = " + clockwise);
         post(mFlingRunnable = new AutoFlingRunnable(flingDegree, false, clockwise));
     }
@@ -551,35 +574,6 @@ public class TurntableView extends View implements Rotatable {
         mVelocityTracker.addMovement(event);
     }
 
-    public void setIconArray(int[] array) {
-        if (array == null || array.length < 1) {
-            return;
-        }
-        mIconArray = array;
-        mIconBmpArray = new Bitmap[array.length];
-        int length = mIconArray.length;
-        float singleDegree = 360.0f / length;
-        for (int i = 0; i < array.length; i++) {
-            mIconBmpArray[i] = BitmapFactory.decodeResource(getResources(), array[i]);
-            mIconBmpArray[i] = ImageUtil.rotatingImageView((int) (360 - rotateDegree + singleDegree * length - mArrowPosition), mIconBmpArray[i]);
-        }
-        invalidate();
-    }
-
-    public void setSelectedIconArray(int[] array) {
-        if (array == null || array.length < 1) {
-            return;
-        }
-        mSelectedIconArray = array;
-        mSelectedIconBmpArray = new Bitmap[array.length];
-        for (int i = 0; i < array.length; i++) {
-            mSelectedIconBmpArray[i] = BitmapFactory.decodeResource(getResources(), array[i]);
-            mSelectedIconBmpArray[i] = ImageUtil.rotatingImageView(0 - mArrowPosition, mSelectedIconBmpArray[i]);
-        }
-
-        invalidate();
-    }
-
     public void setOnSelectItemListener(OnSelectItemListener listener) {
         mSeletectItemListener = listener;
     }
@@ -615,14 +609,34 @@ public class TurntableView extends View implements Rotatable {
         }
     }
 
+    public void setEntities(List<Entity> entities) {
+        if (entities == null || entities.isEmpty()) {
+            return;
+        }
+        mEntities = entities;
+        int length = mEntities.size();
+        float singleDegree = 360.0f / length;
+        for (int i = 0; i < length; i++) {
+            mEntities.get(i).disabledBmp = ImageUtil.rotatingImageView((int) (360 - rotateDegree + singleDegree * length - mArrowPosition),  mEntities.get(i).disabledBmp);
+            mEntities.get(i).normalBmp = ImageUtil.rotatingImageView((int) (360 - rotateDegree + singleDegree * length - mArrowPosition),  mEntities.get(i).normalBmp);
+            mEntities.get(i).selectedBmp = ImageUtil.rotatingImageView(0 - mArrowPosition, mEntities.get(i).selectedBmp);
+        }
+        invalidate();
+    }
+
     public void enableFilter(boolean enabled) {
         mFilterEnabled = enabled;
     }
 
-    public void invokeSelectItemListener() {
+    public void invokeSelectItem() {
         if (!mIsFling && mIsTouchUp && mSeletectItemListener != null) {
             mSeletectItemListener.onSelected(this, mCurrentIconIndex);
         }
+    }
+
+    public void switchType() {
+        mIsFront = !mIsFront;
+        invalidate();
     }
 
     public void show() {
@@ -669,6 +683,7 @@ public class TurntableView extends View implements Rotatable {
 
     public interface OnSelectItemListener {
         public void onSelected(View view, int position);
+        public void onClickInnerCircle();
     }
 
     public void setVibratorTime (int time) {
@@ -676,7 +691,7 @@ public class TurntableView extends View implements Rotatable {
     }
 
     public void setAccelerator (float accelerator) {
-        mAccelerator = accelerator;
+        mFlingAcceleration = accelerator;
     }
 
     /**
@@ -701,22 +716,21 @@ public class TurntableView extends View implements Rotatable {
             if ((int) Math.abs(mFlingVelocity) < 5) {
                 mIsFling = false;
                 mIsTouchUp = true;
-                rotateDegree = (mIconArray.length - mCurrentIconIndex) * (360.0f / mIconArray.length);
+                rotateDegree = (mEntities.size() - mCurrentIconIndex) * (360.0f / mEntities.size());
                 mOffsetDegree = 0;
-                mFlingAcceleration = 0;
                 invalidate();
                 return;
             }
             if (mIsGradient) {
                 // 逐渐减小这个值
                 mOffsetDegree = mFlingVelocity / 1.066f / 30;
-                mFlingVelocity /= mAccelerator;
+                mFlingVelocity /= mFlingAcceleration;
 //                mFlingVelocity = mFlingVelocity + mFlingAcceleration * 16 / 64;
 //                mFlingAcceleration += 0.08;
 //                mFlingVelocity = mFlingOffset * interpolator.getInterpolation(mFlingAcceleration);
             } else {
-                mOffsetDegree = mIsClockwiseFling? 6 : -6;
-                mFlingVelocity += mIsClockwiseFling? -6 : 6;
+                mOffsetDegree = mIsClockwiseFling? 10 : -10;
+                mFlingVelocity += mIsClockwiseFling? -10 : 10;
             }
             // 重新绘制
             invalidate();
@@ -724,4 +738,19 @@ public class TurntableView extends View implements Rotatable {
         }
     }
 
+    public static class Entity {
+        public Bitmap normalBmp;
+        public Bitmap selectedBmp;
+        public Bitmap disabledBmp;
+        public int index;
+        public boolean frontDisable;
+
+        public Entity(Bitmap normalBmp, Bitmap selectedBmp, Bitmap disabledBmp, int index, boolean frontDisable) {
+            this.normalBmp = normalBmp;
+            this.selectedBmp = selectedBmp;
+            this.disabledBmp = disabledBmp;
+            this.index = index;
+            this.frontDisable = frontDisable;
+        }
+    }
 }

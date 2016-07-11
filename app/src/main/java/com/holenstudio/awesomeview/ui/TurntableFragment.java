@@ -1,6 +1,10 @@
 package com.holenstudio.awesomeview.ui;
 
+import android.animation.ObjectAnimator;
+import android.animation.PropertyValuesHolder;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -17,13 +21,19 @@ import com.holenstudio.awesomeview.R;
 import com.holenstudio.awesomeview.util.ImageUtil;
 import com.holenstudio.awesomeview.view.TurntableView;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static com.holenstudio.awesomeview.view.TurntableView.*;
+
 /**
  * Created by Holen on 2016/6/14.
  */
-public class TurnableFragment extends Fragment{
-    private final String TAG = "TurnableFragment";
+public class TurntableFragment extends Fragment {
+    private final String TAG = "TurntableFragment";
     private TurntableView turntableView;
     private int mOrientation;
+    private boolean mIsTurntableViewZoomOut = false;
     private int[] mIconArray = {
             R.drawable.auto
             , R.drawable.flower
@@ -31,11 +41,11 @@ public class TurnableFragment extends Fragment{
             , R.drawable.run
             , R.drawable.scene
             , R.drawable.time
-            , R.drawable.clock
-            , R.drawable.flag
+            , R.drawable.home
+            , R.drawable.note
             , R.drawable.flight
             , R.drawable.heart
-            , R.drawable.shield
+            , R.drawable.vip
     };
     private int[] mSelectedArray = {
             R.drawable.auto_selected
@@ -44,11 +54,24 @@ public class TurnableFragment extends Fragment{
             , R.drawable.run_selected
             , R.drawable.scene_selected
             , R.drawable.time_selected
-            , R.drawable.clock_selected
-            , R.drawable.flag_selected
+            , R.drawable.home_selected
+            , R.drawable.note_selected
             , R.drawable.flight_selected
             , R.drawable.heart_selected
-            , R.drawable.shield_selected
+            , R.drawable.vip_selected
+    };
+    private int[] mDisabledArray = {
+            R.drawable.auto_disable
+            , R.drawable.flower_disable
+            , R.drawable.night_disable
+            , R.drawable.run_disable
+            , R.drawable.scene_disable
+            , R.drawable.time_disable
+            , R.drawable.home_disable
+            , R.drawable.note_disable
+            , R.drawable.flight_disable
+            , R.drawable.heart_disable
+            , R.drawable.vip_disable
     };
     private int[] mSeekbarIdArray = {
             R.id.outer_radius_seekbar
@@ -65,8 +88,8 @@ public class TurnableFragment extends Fragment{
     private TurnableOrientationEventListener mOrientationEventListener;
     private SeekBar.OnSeekBarChangeListener mSeekBarChangeListener;
 
-    public static TurnableFragment getInstance(Bundle args) {
-        TurnableFragment fragment = new TurnableFragment();
+    public static TurntableFragment getInstance(Bundle args) {
+        TurntableFragment fragment = new TurntableFragment();
         if (args != null) {
             fragment.setArguments(args);
         }
@@ -78,12 +101,46 @@ public class TurnableFragment extends Fragment{
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.fragment_turnable, container, false);
         turntableView = (TurntableView) view.findViewById(R.id.turntable_view);
-        turntableView.setIconArray(mIconArray);
-        turntableView.setSelectedIconArray(mSelectedArray);
-        turntableView.setOnSelectItemListener(new TurntableView.OnSelectItemListener() {
+        List<TurntableView.Entity> entities = new ArrayList<>();
+        for (int i = 0; i < mIconArray.length; i++) {
+            Bitmap normalBmp = BitmapFactory.decodeResource(getResources(), mIconArray[i]);
+            Bitmap selectedBmp = BitmapFactory.decodeResource(getResources(), mSelectedArray[i]);
+            Bitmap disabledBmp = BitmapFactory.decodeResource(getResources(), mDisabledArray[i]);
+            boolean frontDisable;
+            if (i == 3 || i == 5 || i == 9) {
+                frontDisable = true;
+            } else {
+                frontDisable = false;
+            }
+            TurntableView.Entity entity = new TurntableView.Entity(normalBmp, selectedBmp, disabledBmp, i, frontDisable);
+            entities.add(i, entity);
+        }
+        turntableView.setEntities(entities);
+        turntableView.setRotateIndex(2);
+        turntableView.setOnSelectItemListener(new OnSelectItemListener() {
             @Override
             public void onSelected(View view, int position) {
                 Toast.makeText(getContext(), "position:" + position, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onClickInnerCircle() {
+                turntableView.switchType();
+                if (!mIsTurntableViewZoomOut) {
+                    PropertyValuesHolder pvh1 = PropertyValuesHolder.ofFloat("translationX", 0.0f);
+                    PropertyValuesHolder pvh2 = PropertyValuesHolder.ofFloat("translationY", 0.0f);
+                    PropertyValuesHolder pvh3 = PropertyValuesHolder.ofFloat("scaleX", 1.5f);
+                    PropertyValuesHolder pvh4 = PropertyValuesHolder.ofFloat("scaleY", 1.5f);
+                    ObjectAnimator.ofPropertyValuesHolder(turntableView, pvh1, pvh2, pvh3, pvh4).setDuration(300).start();
+                    mIsTurntableViewZoomOut = true;
+                } else {
+                    PropertyValuesHolder pvh1 = PropertyValuesHolder.ofFloat("translationX", 0.0f);
+                    PropertyValuesHolder pvh2 = PropertyValuesHolder.ofFloat("translationY", 0.0f);
+                    PropertyValuesHolder pvh3 = PropertyValuesHolder.ofFloat("scaleX", 1.0f);
+                    PropertyValuesHolder pvh4 = PropertyValuesHolder.ofFloat("scaleY", 1.0f);
+                    ObjectAnimator.ofPropertyValuesHolder(turntableView, pvh1, pvh2, pvh3, pvh4).setDuration(300).start();
+                    mIsTurntableViewZoomOut = false;
+                }
             }
         });
         mOrientationEventListener = new TurnableOrientationEventListener(getContext());
@@ -105,7 +162,7 @@ public class TurnableFragment extends Fragment{
                     ((TextView) view.findViewById(mSeekbarValueIdArray[2])).setText("" + progress);
                     turntableView.setVibratorTime(progress);
                 } else if (id == mSeekbarIdArray[3]) {
-                    ((TextView) view.findViewById(mSeekbarValueIdArray[3])).setText("" + (progress * 1.0f / 1000 + 1) );
+                    ((TextView) view.findViewById(mSeekbarValueIdArray[3])).setText("" + (progress * 1.0f / 1000 + 1));
                     turntableView.setAccelerator(progress * 1.0f / 1000 + 1);
                 }
             }
@@ -147,7 +204,7 @@ public class TurnableFragment extends Fragment{
 
         @Override
         public void onOrientationChanged(int orientation) {
-            if(orientation == OrientationEventListener.ORIENTATION_UNKNOWN){
+            if (orientation == OrientationEventListener.ORIENTATION_UNKNOWN) {
                 return;
             }
             Log.d(TAG, "orientation = " + orientation);

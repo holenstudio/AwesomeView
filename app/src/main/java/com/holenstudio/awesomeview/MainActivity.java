@@ -1,9 +1,7 @@
 package com.holenstudio.awesomeview;
 
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -12,17 +10,16 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 
 import com.holenstudio.awesomeview.ui.FanlikeFragment;
 import com.holenstudio.awesomeview.ui.TestFragment;
-import com.holenstudio.awesomeview.ui.TurnableFragment;
+import com.holenstudio.awesomeview.ui.TurntableFragment;
 import com.holenstudio.awesomeview.ui.TurnableLayoutFragment;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
-    private TurnableFragment mTurnableFragment;
+    private TurntableFragment mTurnableFragment;
     private TurnableLayoutFragment mTurnableLayoutFragment;
     private FanlikeFragment mFanlikeFragment;
     private TestFragment mTestFragment;
@@ -36,7 +33,7 @@ public class MainActivity extends AppCompatActivity
         setSupportActionBar(toolbar);
 
         if (mTurnableFragment == null) {
-            mTurnableFragment = TurnableFragment.getInstance(null);
+            mTurnableFragment = TurntableFragment.getInstance(null);
         }
         getSupportFragmentManager().beginTransaction().replace(R.id.content_layout, mTurnableFragment).commit();
         toolbar.setTitle(R.string.turnable_fragment_title);
@@ -92,7 +89,7 @@ public class MainActivity extends AppCompatActivity
         FragmentTransaction ft = getSupportFragmentManager().beginTransaction();
         if (id == R.id.turnable_fragment) {
             if (mTurnableFragment == null) {
-                mTurnableFragment = TurnableFragment.getInstance(null);
+                mTurnableFragment = TurntableFragment.getInstance(null);
             }
             ft.replace(R.id.content_layout, mTurnableFragment).commit();
             toolbar.setTitle(R.string.turnable_fragment_title);
