@@ -116,7 +116,7 @@ public class TurntableFragment extends Fragment {
             entities.add(i, entity);
         }
         turntableView.setEntities(entities);
-        turntableView.setRotateIndex(2);
+        turntableView.setRotateIndex(0);
         turntableView.setOnSelectItemListener(new OnSelectItemListener() {
             @Override
             public void onSelected(View view, int position) {
