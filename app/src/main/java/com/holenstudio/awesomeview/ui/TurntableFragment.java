@@ -108,9 +108,9 @@ public class TurntableFragment extends Fragment {
             Bitmap disabledBmp = BitmapFactory.decodeResource(getResources(), mDisabledArray[i]);
             boolean frontDisable;
             if (i == 3 || i == 5 || i == 9) {
-                frontDisable = true;
-            } else {
                 frontDisable = false;
+            } else {
+                frontDisable = true;
             }
             TurntableView.Entity entity = new TurntableView.Entity(normalBmp, selectedBmp, disabledBmp, i, frontDisable);
             entities.add(i, entity);

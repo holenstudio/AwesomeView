@@ -361,7 +361,7 @@ public class TurntableView extends View implements Rotatable {
         for (int i = 0; i < size; i++) {
 //            Bitmap icon = ImageUtil.rotatingImageView((int) (360 - rotateDegree + singleDegree * (length - i) - mArrowPosition), mIconBmpArray[i]);
             Bitmap icon;
-            if (mIsFront && !mEntities.get(i).frontDisable) {
+            if (mIsFront && mEntities.get(i).frontDisable) {
                 icon = mEntities.get(i).disabledBmp;
             } else {
                 icon = mEntities.get(i).normalBmp;
@@ -515,12 +515,12 @@ public class TurntableView extends View implements Rotatable {
     }
 
     private void handleClickEvent(float currentX, float currentY) {
-//        if (!mIsZoomOut) {
-//            mIsFling = false;
-//            invokeClickInnerCircle();
-//            mIsZoomOut = true;
-//            return;
-//        }
+        if (!mIsZoomOut) {
+            mIsFling = false;
+            invokeClickInnerCircle();
+            mIsZoomOut = true;
+            return;
+        }
         if (Math.sqrt((currentX - mCenterX) * (currentX - mCenterX) + (currentY - mCenterY) * (currentY - mCenterY)) > mOuterRadius) {
             //TODO click out of circle
         } else if (Math.sqrt((currentX - mCenterX) * (currentX - mCenterX) + (currentY - mCenterY) * (currentY - mCenterY)) < mInnerRadius) {
@@ -572,6 +572,10 @@ public class TurntableView extends View implements Rotatable {
         }
         //因为是图标是按逆时针顺序排列，所以需要360-degree
         int clickIndex = (int) (360 - degree + rotateDegree + 360 / 2 / mEntities.size()) % 360 / (360 / mEntities.size());
+        //如果处于前置的状态且点击的图标是disable的，那么就没有反应
+        if (mIsFront && mEntities.get(clickIndex).frontDisable) {
+            return;
+        }
         float flingDegree;
         int offsetIndex;
         if (clockwise) {
@@ -583,8 +587,6 @@ public class TurntableView extends View implements Rotatable {
             offsetIndex += mEntities.size();
         }
         flingDegree = 360.0f / mEntities.size() * offsetIndex * (clockwise? 1 : -1);
-        Log.d(TAG, "flingDegree = " + flingDegree + "clockwise = " + clockwise);
-        Log.d(TAG, "offsetIndex = " + offsetIndex + "clickIndex = " + clickIndex);
         post(mFlingRunnable = new AutoFlingRunnable(flingDegree, false, clockwise, 10));
     }
 
