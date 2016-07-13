@@ -107,7 +107,7 @@ public class TurntableFragment extends Fragment {
             Bitmap selectedBmp = BitmapFactory.decodeResource(getResources(), mSelectedArray[i]);
             Bitmap disabledBmp = BitmapFactory.decodeResource(getResources(), mDisabledArray[i]);
             boolean frontDisable;
-            if (i == 3 || i == 5 || i == 9) {
+            if (i == 3 || i == 6 || i == 9) {
                 frontDisable = false;
             } else {
                 frontDisable = true;

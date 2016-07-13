@@ -36,7 +36,6 @@ public class TurntableView extends View implements Rotatable {
     private static final float DISABLED_ALPHA = 0.4f;
     private static final int ANIMATION_SPEED = 360; // 270 deg/sec
 
-    private Context mContext;
     /**
      * 当屏幕旋转时，当前旋转的角度
      */
@@ -206,8 +205,7 @@ public class TurntableView extends View implements Rotatable {
     public TurntableView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
 
-        mContext = context;
-        TypedArray ta = mContext.obtainStyledAttributes(attrs, R.styleable.AwesomeView);
+        TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.AwesomeView);
         mOuterRadius = ta.getFloat(R.styleable.AwesomeView_outerRadius, 100);
         mInnerRadius = ta.getFloat(R.styleable.AwesomeView_innerRadius, 50);
         mArrowPosition = ta.getInt(R.styleable.AwesomeView_arrowPosition, 0);
@@ -419,19 +417,21 @@ public class TurntableView extends View implements Rotatable {
         for (int i = 0; i < size; i++) {
             position = (int) (360 + rotateDegree - 360.0f / size * i + mArrowPosition) % 360;
             isSelectedIndex = Math.abs(position - mArrowPosition) < (360.0f / size / 2) || Math.abs(position - mArrowPosition) > (360 - 360.0f / size / 2);
-            if (mIsFront) {
-                if (isSelectedIndex) {
-                    if (!mEntities.get(i).frontDisable) {
-                        mLastAvailableIndex = i;
-                    }
+            if (isSelectedIndex) {
+                if (mIsFront) {
                     mCurrentIconIndex = findClosestAvailableIndex(i);
+                } else {
+                    mCurrentIconIndex = i;
                 }
-            } else if (isSelectedIndex) {
-                mCurrentIconIndex = i;
             }
         }
     }
 
+    /**
+     * 找到距离position最近的不是disable状态的图标索引
+     * @param position
+     * @return
+     */
     private int findClosestAvailableIndex (int position) {
         if (!mEntities.get(position).frontDisable) {
             return position;
@@ -482,6 +482,7 @@ public class TurntableView extends View implements Rotatable {
                 double arcSinDegree = ((mLastX - mCenterX) * (currentY - mCenterY) - (mLastY - mCenterY) * (currentX - mCenterX)) /
                         Math.sqrt(((mLastX - mCenterX) * (mLastX - mCenterX) + (mLastY - mCenterY) * (mLastY - mCenterY)) * ((currentX - mCenterX) *
                                 (currentX - mCenterX) + (currentY - mCenterY) * (currentY - mCenterY)));
+                //这里除以2是想让转盘转动的角度不会太大
                 rotateDegree += Math.toDegrees(Math.asin(arcSinDegree)) / 2;
                 mOffsetTotalDegree += Math.toDegrees(Math.asin(arcSinDegree)) / 2;
                 rotateDegree %= 360;
@@ -552,7 +553,7 @@ public class TurntableView extends View implements Rotatable {
         if (index < 0 || index > size) {
             return;
         }
-        setRotateDegree((size - index) * (360.0f / size));
+        setRotateDegree(index * (360.0f / size));
     }
 
     private void handleClickItem(float currentX, float currentY) {
@@ -685,7 +686,8 @@ public class TurntableView extends View implements Rotatable {
 
     public void switchType() {
         mIsFront = !mIsFront;
-        invalidate();
+        setRotateIndex(mLastAvailableIndex);
+        mLastAvailableIndex = mCurrentIconIndex;
     }
 
     public void show() {
